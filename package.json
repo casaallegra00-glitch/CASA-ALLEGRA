@@ -8,10 +8,10 @@
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
-    "start": "electron .",
+  "start": "electron .",
   "dist": "electron-builder --win nsis --x64 --publish never",
-    "dist:portable": "electron-builder --win portable --x64",
-    "build": "npm run dist"
+  "dist:portable": "electron-builder --win portable --x64",
+  "build": "npm run dist"
   },
   "devDependencies": {
     "electron": "43.4.0",
