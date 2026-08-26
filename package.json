@@ -32,17 +32,18 @@
       "!README-ELECTRON.md",
       "!build_windows.bat"
     ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon-512.png",
-      "verifyUpdateCodeSignature": false
+   "win": {
+  "target": [
+    {
+      "target": "nsis",
+      "arch": [
+        "x64"
+      ]
+    }
+  ],
+  "icon": "icon-512.png",
+  "verifyUpdateCodeSignature": false
+}
     },
     "nsis": {
       "oneClick": false,
