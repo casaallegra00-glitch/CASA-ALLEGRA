@@ -1,0 +1,62 @@
+{
+  "name": "casa-allegra-desktop",
+  "productName": "CASA ALLEGRA",
+  "version": "1.1.0",
+  "description": "Aplicación de escritorio para gestionar CASA ALLEGRA, emprendimiento de papelería y gráfica creativa.",
+  "main": "main.js",
+  "author": "CASA ALLEGRA",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis --x64",
+    "dist:portable": "electron-builder --win portable --x64",
+    "build": "npm run dist"
+  },
+  "devDependencies": {
+    "electron": "43.4.0",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "ar.casaallegra.gestion",
+    "productName": "CASA ALLEGRA",
+    "artifactName": "CASA-ALLEGRA-Desktop-${version}-${arch}.${ext}",
+    "asar": true,
+    "compression": "maximum",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!README-ELECTRON.md",
+      "!build_windows.bat"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icons/icon-512.png",
+      "publisherName": "CASA ALLEGRA",
+      "verifyUpdateCodeSignature": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "CASA ALLEGRA",
+      "menuCategory": "CASA ALLEGRA",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "CASA-ALLEGRA-Setup-${version}-x64.exe"
+    }
+  },
+  "artifactName": "CASA-ALLEGRA-Setup-${version}-x64.exe"
+}

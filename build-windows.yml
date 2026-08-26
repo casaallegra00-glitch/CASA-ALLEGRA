@@ -1,0 +1,25 @@
+name: Build CASA ALLEGRA Windows installer
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
+      - name: Instalar Node.js LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependencias
+        run: npm install
+      - name: Generar instalador
+        run: npm run dist
+      - name: Subir instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: CASA-ALLEGRA-Windows
+          path: dist/CASA-ALLEGRA-Setup-*-x64.exe

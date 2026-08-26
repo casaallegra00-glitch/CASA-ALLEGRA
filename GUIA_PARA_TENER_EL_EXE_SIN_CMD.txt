@@ -1,0 +1,18 @@
+CASA ALLEGRA — cómo generar el instalador Windows sin usar CMD
+
+El ZIP contiene un flujo GitHub Actions que compila el instalador automáticamente en un servidor Windows.
+
+Esto es útil cuando no querés instalar Node.js ni ejecutar comandos en tu PC.
+
+1) Crear una cuenta en GitHub si no tenés.
+2) Crear un repositorio nuevo llamado CASA-ALLEGRA.
+3) Subir a ese repositorio TODOS los archivos de esta carpeta (incluida la carpeta .github).
+4) En GitHub abrí Actions.
+5) Elegí “Build CASA ALLEGRA Windows installer”.
+6) Tocá “Run workflow”.
+7) Esperá a que termine.
+8) Abrí la ejecución terminada.
+9) En Artifacts descargá “CASA-ALLEGRA-Windows”.
+10) Dentro estará CASA-ALLEGRA-Setup-1.1.0-x64.exe.
+
+Después, para tu uso normal, solamente hacés doble clic al .exe. No necesitás CMD.

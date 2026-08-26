@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#63c7c9">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CASA ALLEGRA">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="stylesheet" href="styles.css">
+<title>CASA ALLEGRA · Gestión</title>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <img src="logo-casa-allegra.png" alt="Logo CASA ALLEGRA">
+      <div><strong>CASA ALLEGRA</strong><span>Gestión creativa</span></div>
+    </div>
+    <nav class="nav">
+      <button data-section="inicio" class="active">⌂ <span>Inicio</span></button>
+      <button data-section="catalogo">▦ <span>Catálogo</span></button>
+      <button data-section="costos">◐ <span>Costos y precios</span></button>
+      <button data-section="presupuestos">▤ <span>Presupuestos</span></button>
+      <button data-section="pedidos">◷ <span>Pedidos</span></button>
+      <button data-section="ideas">✦ <span>Ideas</span></button>
+      <button data-section="configuracion">⚙ <span>Configuración</span></button>
+    </nav>
+    <div class="sidebar-note">Uso interno · los datos se guardan en este dispositivo.</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Abrir menú">☰</button>
+      <div><div class="eyebrow">CASA ALLEGRA</div><h1 id="pageTitle">Inicio</h1><p id="pageSubtitle">Tu centro de gestión para crear, cotizar y organizar.</p></div>
+      <div class="top-actions"><button class="icon-btn" onclick="openQuickHelp()">?</button><button class="btn primary" onclick="openProductModal()">+ Producto</button></div>
+    </header>
+
+    <section id="inicio" class="section active">
+      <div class="hero card">
+        <div class="hero-copy"><span class="pill">Papelería + gráfica creativa</span><h2>Todo CASA ALLEGRA, en un solo lugar.</h2><p>Controlá costos, precios, catálogo, presupuestos y pedidos desde una interfaz pensada para trabajar rápido desde PC o iPhone.</p><div class="hero-actions"><button class="btn primary" onclick="openProductModal()">Crear producto</button><button class="btn" onclick="openQuoteModal()">Nuevo presupuesto</button></div></div>
+        <img src="logo-casa-allegra.png" class="hero-logo" alt="CASA ALLEGRA">
+      </div>
+      <div class="grid stats">
+        <div class="card stat"><span>Productos</span><strong id="statProducts">0</strong><small>en catálogo</small></div>
+        <div class="card stat"><span>Presupuestos</span><strong id="statQuotes">0</strong><small>registrados</small></div>
+        <div class="card stat"><span>Pedidos activos</span><strong id="statOrders">0</strong><small>sin entregar</small></div>
+        <div class="card stat"><span>Ventas cotizadas</span><strong id="statSales">$ 0</strong><small>total acumulado</small></div>
+      </div>
+      <div class="grid three">
+        <div class="card panel"><div class="panel-head"><div><h3>Rentabilidad</h3><span>margen promedio</span></div><span class="big-kpi" id="avgMargin">0%</span></div><div class="progress"><i id="marginBar"></i></div></div>
+        <div class="card panel"><div class="panel-head"><div><h3>Pedidos pendientes</h3><span>para revisar hoy</span></div><span class="big-kpi" id="pendingOrders">0</span></div><button class="link-btn" onclick="go('pedidos')">Ver seguimiento →</button></div>
+        <div class="card panel"><div class="panel-head"><div><h3>Ideas guardadas</h3><span>nuevos productos y mejoras</span></div><span class="big-kpi" id="statIdeas">0</span></div><button class="link-btn" onclick="go('ideas')">Abrir ideas →</button></div>
+      </div>
+      <div class="card panel"><div class="panel-head"><div><h3>Acciones rápidas</h3><span>Atajos para el trabajo diario</span></div></div><div class="quick-grid"><button class="quick" onclick="go('catalogo')">▦<span>Ver catálogo</span></button><button class="quick" onclick="go('costos')">◐<span>Revisar márgenes</span></button><button class="quick" onclick="openQuoteModal()">▤<span>Cotizar</span></button><button class="quick" onclick="go('pedidos')">◷<span>Seguimiento</span></button></div></div>
+    </section>
+
+    <section id="catalogo" class="section"><div class="section-head"><div><h2>Catálogo</h2><p>Productos y servicios listos para mostrar y cotizar.</p></div><div><button class="btn" onclick="shareCatalog()">WhatsApp</button> <button class="btn primary" onclick="openProductModal()">+ Producto</button></div></div>
+      <div class="card toolbar"><input id="productSearch" class="input" placeholder="Buscar producto, descripción o etiqueta..." oninput="renderCatalog()"><select id="productCategory" class="select" onchange="renderCatalog()"><option value="">Todas las categorías</option></select><select id="productView" class="select" onchange="renderCatalog()"><option value="gridview">Cuadrícula</option><option value="listview">Lista</option><option value="mosaic">Mosaico</option></select></div>
+      <div id="products" class="product-grid gridview"></div>
+    </section>
+
+    <section id="costos" class="section"><div class="section-head"><div><h2>Costos y precios</h2><p>Calculá costo real, precio sugerido y margen por producto.</p></div><button class="btn primary" onclick="openProductModal()">+ Nuevo producto</button></div>
+      <div class="card info-banner"><strong>Fórmula de precio sugerido</strong><span>Precio = (costo + gastos operativos) ÷ (1 − margen deseado)</span><span>Los gastos operativos se toman de Configuración y se aplican como % del costo.</span></div>
+      <div id="pricing" class="pricing-list"></div>
+    </section>
+
+    <section id="presupuestos" class="section"><div class="section-head"><div><h2>Presupuestos</h2><p>Cotizaciones formales, detalladas y listas para WhatsApp.</p></div><button class="btn primary" onclick="openQuoteModal()">+ Nuevo presupuesto</button></div>
+      <div class="card toolbar"><input id="quoteSearch" class="input" placeholder="Buscar cliente, número o producto..." oninput="renderQuotes()"><select id="quoteStatus" class="select" onchange="renderQuotes()"><option value="">Todos los estados</option><option>Pendiente</option><option>Aprobado</option><option>Pagado</option><option>Cancelado</option></select></div>
+      <div class="card table-wrap"><table><thead><tr><th>N.º</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="quotesTable"></tbody></table></div>
+    </section>
+
+    <section id="pedidos" class="section"><div class="section-head"><div><h2>Pedidos</h2><p>Seguí cada pedido desde la confirmación hasta la entrega.</p></div></div>
+      <div class="order-stages"><div><span class="dot pending"></span><b>Pendiente</b></div><div><span class="dot process"></span><b>En proceso</b></div><div><span class="dot ready"></span><b>Listo</b></div><div><span class="dot done"></span><b>Entregado</b></div></div>
+      <div class="card toolbar"><input id="orderSearch" class="input" placeholder="Buscar cliente o pedido..." oninput="renderOrders()"><select id="orderStatus" class="select" onchange="renderOrders()"><option value="">Todos</option><option>Pendiente</option><option>En proceso</option><option>Listo</option><option>Entregado</option><option>Cancelado</option></select></div>
+      <div class="card table-wrap"><table><thead><tr><th>Pedido</th><th>Cliente</th><th>Fecha</th><th>Total</th><th>Estado</th><th>Origen</th><th>Acciones</th></tr></thead><tbody id="ordersTable"></tbody></table></div>
+    </section>
+
+    <section id="ideas" class="section"><div class="section-head"><div><h2>Ideas</h2><p>Guardá nuevos productos, campañas, procesos y contenidos.</p></div><button class="btn primary" onclick="openIdeaModal()">+ Nueva idea</button></div><div id="ideasGrid" class="ideas-grid"></div></section>
+
+    <section id="configuracion" class="section"><div class="section-head"><div><h2>Configuración</h2><p>Una puesta a punto simple para empezar a trabajar.</p></div></div>
+      <div class="settings-grid">
+        <div class="card panel"><h3>Datos del negocio</h3><p class="muted">Estos datos aparecen en presupuestos y mensajes.</p><div class="form-grid"><label>Nombre<input id="sBusiness" class="input"></label><label>WhatsApp<input id="sPhone" class="input" placeholder="549..." inputmode="numeric"></label><label>Dirección<input id="sAddress" class="input"></label><label>Instagram / sitio<input id="sSocial" class="input" placeholder="@casallegra"></label></div><button class="btn primary" onclick="saveSettings()">Guardar cambios</button></div>
+        <div class="card panel"><h3>Gastos operativos</h3><p class="muted">Porcentaje aplicado sobre el costo para incluir gastos indirectos.</p><div class="field"><label>% de gastos operativos</label><input id="sOverhead" class="input" type="number" min="0" max="300" step="0.1"></div><div class="formula-box">Ejemplo: con $10.000 de costo y 10% de gastos, el costo base para fijar precio será $11.000.</div><button class="btn primary" onclick="saveSettings()">Guardar</button></div>
+        <div class="card panel"><h3>Copias de seguridad</h3><p class="muted">Pasá tus datos de un equipo a otro cuando quieras.</p><div class="backup-actions"><button class="btn" onclick="exportData()">Exportar copia</button><button class="btn" onclick="document.getElementById('importFile').click()">Importar copia</button><input id="importFile" type="file" accept="application/json" hidden onchange="importData(event)"></div><div class="notice">Además de la copia manual, podés activar la sincronización en la nube para usar los mismos datos en la PC y en Safari del iPhone.</div></div>
+        <div class="card panel"><h3>Sincronización PC + iPhone</h3><p class="muted">Usá la misma cuenta en ambos dispositivos. Tus productos, presupuestos, pedidos e ideas se mantienen sincronizados cuando la app está conectada a Internet.</p><div class="form-grid"><label>URL del proyecto Supabase<input id="syncUrl" class="input" placeholder="https://xxxxx.supabase.co"></label><label>Clave pública (anon)<input id="syncKey" class="input" placeholder="eyJ..." type="password"></label><label>Correo de CASA ALLEGRA<input id="syncEmail" class="input" type="email" placeholder="tu-correo@gmail.com"></label><label>Contraseña de CASA ALLEGRA<input id="syncPassword" class="input" type="password" placeholder="mínimo 6 caracteres"></label></div><div class="backup-actions"><button class="btn primary" onclick="saveSyncConfig()">Guardar conexión</button><button class="btn" onclick="registerSyncAccount()">Crear cuenta</button><button class="btn" onclick="loginSyncAccount()">Iniciar sesión</button><button class="btn" onclick="syncNow('smart')">Sincronizar ahora</button><button class="btn danger-outline" onclick="logoutSyncAccount()">Cerrar sesión nube</button></div><div class="sync-status" id="syncStatus">Sin configurar.</div><div class="notice">Importante: usá solamente la clave pública <b>anon</b>. Nunca pegues aquí la <b>service_role</b>.</div></div>
+        <div class="card panel"><h3>Iniciar con Windows</h3><p class="muted">CASA ALLEGRA puede abrirse automáticamente cuando iniciás Windows, sin usar CMD.</p><label class="toggle-row"><input id="autoStartToggle" type="checkbox" onchange="toggleAutoStart(this.checked)"><span>Abrir CASA ALLEGRA al iniciar Windows</span></label><div class="notice">Esta opción está disponible en la versión de escritorio Electron para Windows.</div></div>
+        <div class="card panel"><h3>Datos de ejemplo</h3><p class="muted">Ideal para explorar la app antes de cargar tus productos.</p><button class="btn" onclick="loadDemo()">Cargar ejemplo de CASA ALLEGRA</button><button class="btn danger-outline" onclick="clearAllData()">Borrar todos los datos</button></div>
+      </div>
+    </section>
+
+    <footer>CASA ALLEGRA · herramienta interna · versión web instalable</footer>
+  </main>
+</div>
+
+<div class="bottom-nav"><button data-section="inicio">⌂<span>Inicio</span></button><button data-section="catalogo">▦<span>Catálogo</span></button><button data-section="presupuestos">▤<span>Presupuestos</span></button><button data-section="pedidos">◷<span>Pedidos</span></button><button data-section="configuracion">⚙<span>Ajustes</span></button></div>
+
+<div id="productModal" class="modal"><div class="modal-box"><div class="modal-head"><div><span class="eyebrow">CATÁLOGO</span><h3 id="productModalTitle">Nuevo producto</h3></div><button class="icon-btn" onclick="closeModal('productModal')">×</button></div><form id="productForm" onsubmit="saveProduct(event)"><input type="hidden" id="productId"><div class="form-grid"><label>Nombre<input class="input" id="pName" required></label><label>Categoría<input class="input" id="pCategory" placeholder="Agendas, regalos, escolar..."></label><label class="full">Descripción<textarea class="textarea" id="pDesc" rows="3"></textarea></label><label>Imagen (URL)<input class="input" id="pImage" placeholder="https://..."></label><label>SKU / código<input class="input" id="pSku"></label><label>Costo de insumos ($)<input class="input" id="pSupplies" type="number" min="0" step="0.01" value="0"></label><label>Mano de obra ($)<input class="input" id="pLabor" type="number" min="0" step="0.01" value="0"></label><label>Otros costos ($)<input class="input" id="pOther" type="number" min="0" step="0.01" value="0"></label><label>Margen deseado (%)<input class="input" id="pMargin" type="number" min="0" max="95" step="0.1" value="40"></label><label>Precio de venta ($)<input class="input" id="pPrice" type="number" min="0" step="0.01" value="0"></label><label>Stock<input class="input" id="pStock" type="number" min="0" step="1" value="0"></label><label>Etiquetas<input class="input" id="pTags" placeholder="regalo, personalizado"></label></div><div class="calc-preview"><div>Costo directo <strong id="previewCost">$ 0</strong></div><div>Precio sugerido <strong id="previewPrice">$ 0</strong></div><div>Margen estimado <strong id="previewMargin">0%</strong></div></div><div class="modal-foot"><button type="button" class="btn" onclick="closeModal('productModal')">Cancelar</button><button class="btn primary">Guardar producto</button></div></form></div></div>
+
+<div id="quoteModal" class="modal"><div class="modal-box wide"><div class="modal-head"><div><span class="eyebrow">VENTAS</span><h3>Nuevo presupuesto</h3></div><button class="icon-btn" onclick="closeModal('quoteModal')">×</button></div><form id="quoteForm" onsubmit="saveQuote(event)"><div class="form-grid"><label>Cliente<input class="input" id="qClient" required></label><label>WhatsApp<input class="input" id="qPhone" placeholder="5491112345678" inputmode="numeric"></label><label>Validez<input class="input" id="qValidity" value="7 días"></label><label>Observaciones<input class="input" id="qNotes"></label></div><div class="line-head"><h4>Ítems</h4><button type="button" class="btn" onclick="addQuoteLine()">+ Agregar</button></div><div id="quoteLines" class="quote-lines"></div><div class="summary card"><div><span>Subtotal</span><strong id="quoteSubtotal">$ 0</strong></div><div><span>Descuento</span><input id="qDiscount" class="input mini" type="number" min="0" step="0.01" value="0" oninput="updateQuoteTotal()"></div><div class="summary-total"><span>Total</span><strong id="quoteTotal">$ 0</strong></div></div><div class="modal-foot"><button type="button" class="btn" onclick="closeModal('quoteModal')">Cancelar</button><button class="btn primary">Guardar presupuesto</button></div></form></div></div>
+
+<div id="ideaModal" class="modal"><div class="modal-box"><div class="modal-head"><div><span class="eyebrow">IDEAS</span><h3>Nueva idea</h3></div><button class="icon-btn" onclick="closeModal('ideaModal')">×</button></div><form onsubmit="saveIdea(event)"><div class="form-grid"><label>Título<input id="iTitle" class="input" required></label><label>Tipo<select id="iType" class="select"><option>Producto</option><option>Campaña</option><option>Proceso</option><option>Contenido</option><option>Otro</option></select></label><label class="full">Detalle<textarea id="iBody" class="textarea" rows="5"></textarea></label></div><div class="modal-foot"><button type="button" class="btn" onclick="closeModal('ideaModal')">Cancelar</button><button class="btn primary">Guardar idea</button></div></form></div></div>
+
+<div id="helpModal" class="modal"><div class="modal-box"><div class="modal-head"><div><span class="eyebrow">AYUDA RÁPIDA</span><h3>Cómo empezar</h3></div><button class="icon-btn" onclick="closeModal('helpModal')">×</button></div><div class="help-list"><div><b>1. Configuración</b><span>Completá nombre, WhatsApp y gastos operativos.</span></div><div><b>2. Catálogo</b><span>Cargá productos con costo, margen y stock.</span></div><div><b>3. Presupuesto</b><span>Elegí productos, cantidades y compartí por WhatsApp.</span></div><div><b>4. Pedidos</b><span>Convertí un presupuesto en pedido y actualizá su estado.</span></div></div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</body>
+</html>
