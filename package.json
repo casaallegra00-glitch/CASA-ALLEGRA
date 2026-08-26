@@ -41,8 +41,7 @@
           ]
         }
       ],
-      "icon": "icons/icon-512.png",
-      "publisherName": "CASA ALLEGRA",
+      "icon-512.png",
       "verifyUpdateCodeSignature": false
     },
     "nsis": {
