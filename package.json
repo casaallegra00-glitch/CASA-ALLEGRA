@@ -32,7 +32,7 @@
       "!README-ELECTRON.md",
       "!build_windows.bat"
     ],
-   "win": {
+  "win": {
   "target": [
     {
       "target": "nsis",
@@ -43,7 +43,6 @@
   ],
   "icon": "icon-512.png",
   "verifyUpdateCodeSignature": false
-}
     },
     "nsis": {
       "oneClick": false,
