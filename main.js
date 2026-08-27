@@ -38,35 +38,17 @@ function askOpenAI({ apiKey, model, message, context }) {
   return new Promise((resolve, reject) => {
     const instructions = `Sos el asistente de gestión de CASA ALLEGRA, un negocio argentino de papelería y gráfica creativa. Respondé en español rioplatense, de forma clara, práctica y profesional. Ayudá con costos, precios, márgenes, catálogo, ventas, presupuestos, pedidos, stock, ideas, organización y métricas. No inventes datos del negocio: usá únicamente el contexto proporcionado y marcá cuando falte información. Cuando des recomendaciones comerciales, separá hechos de sugerencias. Contexto actual de CASA ALLEGRA:\n${JSON.stringify(context || {}, null, 2)}`;
     const body = JSON.stringify({ model: model || 'gpt-5', instructions, input: message, max_output_tokens: 900 });
-    const req = https.request({
-      hostname: 'api.openai.com',
-      path: '/v1/responses',
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body)
-      }
-    }, res => {
+    const req = https.request({ hostname: 'api.openai.com', path: '/v1/responses', method: 'POST', headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
       let data = '';
       res.setEncoding('utf8');
       res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         try {
           const json = JSON.parse(data);
-          if (res.statusCode < 200 || res.statusCode >= 300) {
-            reject(new Error(json?.error?.message || `OpenAI devolvió HTTP ${res.statusCode}.`));
-            return;
-          }
-          const text = json.output_text || (json.output || [])
-            .flatMap(item => Array.isArray(item.content) ? item.content : [])
-            .filter(part => part.type === 'output_text' && typeof part.text === 'string')
-            .map(part => part.text)
-            .join('\n');
+          if (res.statusCode < 200 || res.statusCode >= 300) { reject(new Error(json?.error?.message || `OpenAI devolvió HTTP ${res.statusCode}.`)); return; }
+          const text = json.output_text || (json.output || []).flatMap(item => Array.isArray(item.content) ? item.content : []).filter(part => part.type === 'output_text' && typeof part.text === 'string').map(part => part.text).join('\n');
           resolve(text || 'La IA no devolvió texto.');
-        } catch {
-          reject(new Error('Respuesta inválida del servicio de IA.'));
-        }
+        } catch { reject(new Error('Respuesta inválida del servicio de IA.')); }
       });
     });
     req.on('error', err => reject(new Error(`No se pudo conectar con OpenAI: ${err.message}`)));
@@ -112,10 +94,7 @@ function createWindow() {
   win.webContents.on('will-navigate', (event, url) => {
     const current = win.webContents.getURL();
     const sameLocalApp = url.startsWith('file://') || url === current;
-    if (!sameLocalApp) {
-      event.preventDefault();
-      shell.openExternal(url);
-    }
+    if (!sameLocalApp) { event.preventDefault(); shell.openExternal(url); }
   });
 
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
@@ -127,9 +106,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  if (process.platform === 'win32' && app.isPackaged) {
-    app.setLoginItemSettings({ openAtLogin: true, name: 'CASA ALLEGRA' });
-  }
+  if (process.platform === 'win32' && app.isPackaged) app.setLoginItemSettings({ openAtLogin: true, name: 'CASA ALLEGRA' });
 
   ipcMain.handle('get-autostart', () => {
     if (process.platform !== 'win32') return false;
@@ -143,12 +120,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('ai-has-key', () => Boolean(readAIKey()));
-
-  ipcMain.handle('ai-set-key', (_event, key) => {
-    saveAIKey(String(key || '').trim());
-    return true;
-  });
-
+  ipcMain.handle('ai-set-key', (_event, key) => { saveAIKey(String(key || '').trim()); return true; });
   ipcMain.handle('ai-chat', async (_event, payload = {}) => {
     const apiKey = readAIKey();
     if (!apiKey) throw new Error('Configurá primero tu clave de OpenAI en ⚙ del Asistente IA.');
@@ -176,12 +148,7 @@ app.whenReady().then(() => {
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
   createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
-});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
