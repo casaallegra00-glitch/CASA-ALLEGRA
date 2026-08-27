@@ -1,7 +1,80 @@
-const { app, BrowserWindow, shell, Menu, session, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, Menu, session, ipcMain, safeStorage } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
 
 const isDev = !app.isPackaged;
+
+function aiKeyPath() {
+  return path.join(app.getPath('userData'), 'ai-key.json');
+}
+
+function readAIKey() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(aiKeyPath(), 'utf8'));
+    if (raw.encrypted && safeStorage.isEncryptionAvailable()) {
+      return safeStorage.decryptString(Buffer.from(raw.encrypted, 'base64'));
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+function saveAIKey(key) {
+  if (!key) {
+    try { fs.rmSync(aiKeyPath(), { force: true }); } catch {}
+    return true;
+  }
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error('El cifrado seguro de Windows no está disponible en este equipo.');
+  }
+  const encrypted = safeStorage.encryptString(key).toString('base64');
+  fs.writeFileSync(aiKeyPath(), JSON.stringify({ encrypted }), 'utf8');
+  return true;
+}
+
+function askOpenAI({ apiKey, model, message, context }) {
+  return new Promise((resolve, reject) => {
+    const instructions = `Sos el asistente de gestión de CASA ALLEGRA, un negocio argentino de papelería y gráfica creativa. Respondé en español rioplatense, de forma clara, práctica y profesional. Ayudá con costos, precios, márgenes, catálogo, ventas, presupuestos, pedidos, stock, ideas, organización y métricas. No inventes datos del negocio: usá únicamente el contexto proporcionado y marcá cuando falte información. Cuando des recomendaciones comerciales, separá hechos de sugerencias. Contexto actual de CASA ALLEGRA:\n${JSON.stringify(context || {}, null, 2)}`;
+    const body = JSON.stringify({ model: model || 'gpt-5', instructions, input: message, max_output_tokens: 900 });
+    const req = https.request({
+      hostname: 'api.openai.com',
+      path: '/v1/responses',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      }
+    }, res => {
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            reject(new Error(json?.error?.message || `OpenAI devolvió HTTP ${res.statusCode}.`));
+            return;
+          }
+          const text = json.output_text || (json.output || [])
+            .flatMap(item => Array.isArray(item.content) ? item.content : [])
+            .filter(part => part.type === 'output_text' && typeof part.text === 'string')
+            .map(part => part.text)
+            .join('\n');
+          resolve(text || 'La IA no devolvió texto.');
+        } catch (e) {
+          reject(new Error('Respuesta inválida del servicio de IA.'));
+        }
+      });
+    });
+    req.on('error', err => reject(new Error(`No se pudo conectar con OpenAI: ${err.message}`)));
+    req.setTimeout(30000, () => req.destroy(new Error('La solicitud a la IA tardó demasiado.')));
+    req.write(body);
+    req.end();
+  });
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -25,6 +98,12 @@ function createWindow() {
 
   win.once('ready-to-show', () => win.show());
 
+  win.webContents.on('did-finish-load', () => {
+    const aiPath = path.join(__dirname, 'casa-allegra-ai.js').replace(/\\/g, '/');
+    const safeUrl = `file://${aiPath}`;
+    win.webContents.executeJavaScript(`(() => { const s = document.createElement('script'); s.src = ${JSON.stringify(safeUrl)}; s.onload = () => window.dispatchEvent(new Event('casa-allegra-ai-ready')); document.head.appendChild(s); })();`).catch(() => {});
+  });
+
   // Keep the app native: external sites (especially WhatsApp) open in the default browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^(https?:|mailto:|tel:)/i.test(url)) {
@@ -42,7 +121,6 @@ function createWindow() {
     }
   });
 
-  // Slightly stricter permissions for a local business app.
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
     const allowed = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write']);
     callback(allowed.has(permission));
@@ -72,6 +150,22 @@ app.whenReady().then(() => {
       enabled: true
     });
     return app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin;
+  });
+
+  ipcMain.handle('ai-has-key', () => Boolean(readAIKey()));
+
+  ipcMain.handle('ai-set-key', (_event, key) => {
+    saveAIKey(String(key || '').trim());
+    return true;
+  });
+
+  ipcMain.handle('ai-chat', async (_event, payload = {}) => {
+    const apiKey = readAIKey();
+    if (!apiKey) throw new Error('Configurá primero tu clave de OpenAI en ⚙ del Asistente IA.');
+    const message = String(payload.message || '').trim();
+    if (!message) throw new Error('Escribí una consulta.');
+    const context = payload.context || {};
+    return askOpenAI({ apiKey, model: payload.model || 'gpt-5', message, context });
   });
 
   const template = [
