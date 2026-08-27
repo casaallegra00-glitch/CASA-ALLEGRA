@@ -25,39 +25,24 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Preparar sitio CASA ALLEGRA
+      - name: Preparar versión web CASA ALLEGRA
         shell: bash
         run: |
           set -e
+          test -f index.html
+          test -f styles.css
+          test -f app.js
+          test -f casa-allegra-enhancements.js
+          test -f casa-allegra-ai.js
+          test -f casa-allegra-store.js
+          test -f casa-allegra-pagos-envios.js
+          test -f casa-allegra-pro.js
+          test -f casa-allegra-multishop.js
+          test -f casa-allegra-pro-dashboard.js
+          test -f casa-allegra-analytics.js
           touch .nojekyll
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('index.html')
-          text = p.read_text(encoding='utf-8')
-          scripts = [
-              'casa-allegra-enhancements.js',
-              'casa-allegra-ai.js',
-              'casa-allegra-store.js',
-              'casa-allegra-pagos-envios.js',
-              'casa-allegra-pro.js',
-              'casa-allegra-multishop.js',
-              'casa-allegra-pro-dashboard.js',
-              'casa-allegra-analytics.js',
-          ]
-          missing = [s for s in scripts if not Path(s).exists()]
-          if missing:
-              raise SystemExit('Faltan archivos de funciones CASA ALLEGRA: ' + ', '.join(missing))
-          additions = ''.join(f'<script src="./{s}"></script>\n' for s in scripts)
-          if 'casa-allegra-enhancements.js' not in text:
-              marker = '</body>'
-              if marker in text:
-                  text = text.replace(marker, additions + marker, 1)
-              else:
-                  text += '\n' + additions
-              p.write_text(text, encoding='utf-8')
-          PY
 
-      - name: Subir sitio a Pages
+      - name: Crear artefacto de GitHub Pages
         uses: actions/upload-pages-artifact@v4
         with:
           path: .
@@ -69,6 +54,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Publicar en GitHub Pages
+      - name: Publicar CASA ALLEGRA
         id: deployment
         uses: actions/deploy-pages@v4
