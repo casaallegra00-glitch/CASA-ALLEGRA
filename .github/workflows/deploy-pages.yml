@@ -1,0 +1,56 @@
+name: Deploy CASA ALLEGRA Web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar proyecto
+        uses: actions/checkout@v6
+      - name: Preparar sitio
+        shell: bash
+        run: |
+          rm -rf _site
+          mkdir _site
+          cp -R . _site
+          rm -rf _site/.git _site/.github _site/node_modules
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('_site/index.html')
+          text=p.read_text(encoding='utf-8')
+          marker='</body>'
+          scripts='''\n<script src="./casa-allegra-enhancements.js"></script>\n<script src="./casa-allegra-ai.js"></script>\n<script src="./casa-allegra-store.js"></script>\n<script src="./casa-allegra-pagos-envios.js"></script>\n<script src="./casa-allegra-pro.js"></script>\n<script src="./casa-allegra-multishop.js"></script>\n'''
+          if 'casa-allegra-multishop.js' not in text:
+              text=text.replace(marker, scripts+marker)
+          p.write_text(text,encoding='utf-8')
+          PY
+          touch _site/.nojekyll
+      - name: Configurar Pages
+        uses: actions/configure-pages@v5
+      - name: Subir sitio
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar en GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
