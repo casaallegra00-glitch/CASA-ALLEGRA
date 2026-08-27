@@ -5,40 +5,26 @@ const https = require('https');
 
 const isDev = !app.isPackaged;
 
-function aiKeyPath() {
-  return path.join(app.getPath('userData'), 'ai-key.json');
-}
-
+function aiKeyPath() { return path.join(app.getPath('userData'), 'ai-key.json'); }
 function readAIKey() {
   try {
     const raw = JSON.parse(fs.readFileSync(aiKeyPath(), 'utf8'));
-    if (raw.encrypted && safeStorage.isEncryptionAvailable()) {
-      return safeStorage.decryptString(Buffer.from(raw.encrypted, 'base64'));
-    }
+    if (raw.encrypted && safeStorage.isEncryptionAvailable()) return safeStorage.decryptString(Buffer.from(raw.encrypted, 'base64'));
     return '';
-  } catch {
-    return '';
-  }
+  } catch { return ''; }
 }
-
 function saveAIKey(key) {
-  if (!key) {
-    try { fs.rmSync(aiKeyPath(), { force: true }); } catch {}
-    return true;
-  }
-  if (!safeStorage.isEncryptionAvailable()) {
-    throw new Error('El cifrado seguro de Windows no está disponible en este equipo.');
-  }
+  if (!key) { try { fs.rmSync(aiKeyPath(), { force: true }); } catch {} return true; }
+  if (!safeStorage.isEncryptionAvailable()) throw new Error('El cifrado seguro de Windows no está disponible en este equipo.');
   const encrypted = safeStorage.encryptString(key).toString('base64');
   fs.writeFileSync(aiKeyPath(), JSON.stringify({ encrypted }), 'utf8');
   return true;
 }
-
 function askOpenAI({ apiKey, model, message, context }) {
   return new Promise((resolve, reject) => {
     const instructions = `Sos el asistente de gestión de CASA ALLEGRA, un negocio argentino de papelería y gráfica creativa. Respondé en español rioplatense, de forma clara, práctica y profesional. Ayudá con costos, precios, márgenes, catálogo, ventas, presupuestos, pedidos, stock, ideas, organización y métricas. No inventes datos del negocio: usá únicamente el contexto proporcionado y marcá cuando falte información. Cuando des recomendaciones comerciales, separá hechos de sugerencias. Contexto actual de CASA ALLEGRA:\n${JSON.stringify(context || {}, null, 2)}`;
     const body = JSON.stringify({ model: model || 'gpt-5', instructions, input: message, max_output_tokens: 900 });
-    const req = https.request({ hostname: 'api.openai.com', path: '/v1/responses', method: 'POST', headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
+    const req = https.request({ hostname: 'api.openai.com', path: '/v1/responses', method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
       let data = '';
       res.setEncoding('utf8');
       res.on('data', chunk => { data += chunk; });
@@ -53,102 +39,34 @@ function askOpenAI({ apiKey, model, message, context }) {
     });
     req.on('error', err => reject(new Error(`No se pudo conectar con OpenAI: ${err.message}`)));
     req.setTimeout(30000, () => req.destroy(new Error('La solicitud a la IA tardó demasiado.')));
-    req.write(body);
-    req.end();
+    req.write(body); req.end();
   });
 }
-
 function createWindow() {
-  const win = new BrowserWindow({
-    width: 1440,
-    height: 920,
-    minWidth: 1024,
-    minHeight: 720,
-    backgroundColor: '#f7f4ff',
-    show: false,
-    autoHideMenuBar: true,
-    icon: path.join(__dirname, 'icons', 'icon-512.png'),
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-      preload: path.join(__dirname, 'preload.js'),
-      sandbox: true,
-      spellcheck: true,
-      devTools: isDev
-    }
-  });
-
+  const win = new BrowserWindow({ width: 1440, height: 920, minWidth: 1024, minHeight: 720, backgroundColor: '#f7f4ff', show: false, autoHideMenuBar: true, icon: path.join(__dirname, 'icons', 'icon-512.png'), webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js'), sandbox: true, spellcheck: true, devTools: isDev } });
   win.once('ready-to-show', () => win.show());
-
   win.webContents.on('did-finish-load', () => {
-    const files = ['casa-allegra-enhancements.js', 'casa-allegra-ai.js'];
+    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js'];
     const paths = files.map(name => `file://${path.join(__dirname, name).replace(/\\/g, '/')}`);
-    win.webContents.executeJavaScript(`(() => { const files = ${JSON.stringify(paths)}; files.forEach(src => { const s=document.createElement('script'); s.src=src; document.head.appendChild(s); }); })();`).catch(() => {});
+    win.webContents.executeJavaScript(`(() => { for (const src of ${JSON.stringify(paths)}) { const s=document.createElement('script'); s.src=src; document.body.appendChild(s); } })();`).catch(() => {});
   });
-
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^(https?:|mailto:|tel:)/i.test(url)) shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  win.webContents.on('will-navigate', (event, url) => {
-    const current = win.webContents.getURL();
-    const sameLocalApp = url.startsWith('file://') || url === current;
-    if (!sameLocalApp) { event.preventDefault(); shell.openExternal(url); }
-  });
-
-  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-    const allowed = new Set(['notifications', 'clipboard-read', 'clipboard-sanitized-write']);
-    callback(allowed.has(permission));
-  });
-
+  win.webContents.setWindowOpenHandler(({ url }) => { if (/^(https?:|mailto:|tel:)/i.test(url)) shell.openExternal(url); return { action: 'deny' }; });
+  win.webContents.on('will-navigate', (event, url) => { const current = win.webContents.getURL(); const sameLocalApp = url.startsWith('file://') || url === current; if (!sameLocalApp) { event.preventDefault(); shell.openExternal(url); } });
+  session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => callback(new Set(['notifications','clipboard-read','clipboard-sanitized-write']).has(permission)));
   win.loadFile(path.join(__dirname, 'index.html'));
 }
-
 app.whenReady().then(() => {
   if (process.platform === 'win32' && app.isPackaged) app.setLoginItemSettings({ openAtLogin: true, name: 'CASA ALLEGRA' });
-
-  ipcMain.handle('get-autostart', () => {
-    if (process.platform !== 'win32') return false;
-    return app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin;
-  });
-
-  ipcMain.handle('set-autostart', (_event, enabled) => {
-    if (process.platform !== 'win32') return false;
-    app.setLoginItemSettings({ openAtLogin: Boolean(enabled), name: 'CASA ALLEGRA', enabled: true });
-    return app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin;
-  });
-
+  ipcMain.handle('get-autostart', () => process.platform === 'win32' ? app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin : false);
+  ipcMain.handle('set-autostart', (_event, enabled) => { if (process.platform !== 'win32') return false; app.setLoginItemSettings({ openAtLogin: Boolean(enabled), name: 'CASA ALLEGRA', enabled: true }); return app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin; });
   ipcMain.handle('ai-has-key', () => Boolean(readAIKey()));
   ipcMain.handle('ai-set-key', (_event, key) => { saveAIKey(String(key || '').trim()); return true; });
-  ipcMain.handle('ai-chat', async (_event, payload = {}) => {
-    const apiKey = readAIKey();
-    if (!apiKey) throw new Error('Configurá primero tu clave de OpenAI en ⚙ del Asistente IA.');
-    const message = String(payload.message || '').trim();
-    if (!message) throw new Error('Escribí una consulta.');
-    return askOpenAI({ apiKey, model: payload.model || 'gpt-5', message, context: payload.context || {} });
-  });
-
-  const template = [
-    { label: 'CASA ALLEGRA', submenu: [
-      { label: 'Recargar', accelerator: 'CmdOrCtrl+R', click: (_m, w) => w?.reload() },
-      { type: 'separator' },
-      { role: 'quit', label: 'Salir de CASA ALLEGRA' }
-    ]},
-    { label: 'Ver', submenu: [
-      { role: 'resetZoom', label: 'Tamaño normal' },
-      { role: 'zoomIn', label: 'Acercar' },
-      { role: 'zoomOut', label: 'Alejar' },
-      { type: 'separator' },
-      { role: 'togglefullscreen', label: 'Pantalla completa' }
-    ]},
-    { label: 'Ayuda', submenu: [
-      { label: 'Abrir carpeta de datos', click: () => shell.openPath(app.getPath('userData')) }
-    ]}
-  ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-  createWindow();
-  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
+  ipcMain.handle('ai-chat', async (_event, payload = {}) => { const apiKey = readAIKey(); if (!apiKey) throw new Error('Configurá primero tu clave de OpenAI en ⚙ del Asistente IA.'); const message = String(payload.message || '').trim(); if (!message) throw new Error('Escribí una consulta.'); return askOpenAI({ apiKey, model: payload.model || 'gpt-5', message, context: payload.context || {} }); });
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    { label: 'CASA ALLEGRA', submenu: [{ label: 'Recargar', accelerator: 'CmdOrCtrl+R', click: (_m, w) => w?.reload() }, { type: 'separator' }, { role: 'quit', label: 'Salir de CASA ALLEGRA' }] },
+    { label: 'Ver', submenu: [{ role: 'resetZoom', label: 'Tamaño normal' }, { role: 'zoomIn', label: 'Acercar' }, { role: 'zoomOut', label: 'Alejar' }, { type: 'separator' }, { role: 'togglefullscreen', label: 'Pantalla completa' }] },
+    { label: 'Ayuda', submenu: [{ label: 'Abrir carpeta de datos', click: () => shell.openPath(app.getPath('userData')) }] }
+  ]));
+  createWindow(); app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
-
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
