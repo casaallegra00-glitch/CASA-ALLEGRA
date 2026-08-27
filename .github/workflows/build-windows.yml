@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: windows-latest
@@ -18,8 +21,40 @@ jobs:
         with:
           node-version: 22
 
+      - name: Preparar npm
+        shell: pwsh
+        run: |
+          npm --version
+          node --version
+          if (-not (Test-Path package.json)) {
+            Write-Error 'No se encontró package.json en la raíz del repositorio.'
+            exit 1
+          }
+
+      - name: Crear lockfile si falta
+        shell: pwsh
+        run: |
+          if (-not (Test-Path package-lock.json)) {
+            Write-Host 'No existe package-lock.json. Generando uno a partir de package.json...'
+            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          }
+          if (-not (Test-Path package-lock.json)) {
+            Write-Error 'No se pudo generar package-lock.json.'
+            exit 1
+          }
+          Write-Host 'package-lock.json listo.'
+
       - name: Instalar dependencias
-        run: npm install
+        run: npm ci --no-audit --no-fund
+
+      - name: Verificar dependencias críticas
+        shell: pwsh
+        run: |
+          npm ls electron electron-builder next react react-dom --depth=0
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error 'Las dependencias críticas no pudieron instalarse correctamente.'
+            exit 1
+          }
 
       - name: Generar instalador
         run: npm run dist
@@ -33,10 +68,18 @@ jobs:
             exit 1
           }
           Write-Host "Instalador generado: $($installer.FullName)"
+          Write-Host "Tamaño: $([math]::Round($installer.Length / 1MB, 2)) MB"
 
       - name: Subir instalador
         uses: actions/upload-artifact@v4
         with:
           name: CASA-ALLEGRA-Windows
           path: dist/CASA-ALLEGRA-Setup-*-x64.exe
+          if-no-files-found: error
+
+      - name: Subir lockfile generado
+        uses: actions/upload-artifact@v4
+        with:
+          name: CASA-ALLEGRA-package-lock
+          path: package-lock.json
           if-no-files-found: error
