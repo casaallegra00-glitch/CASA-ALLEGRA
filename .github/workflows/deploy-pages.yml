@@ -2,7 +2,8 @@ name: Deploy CASA ALLEGRA Web
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -19,33 +20,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar proyecto
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Preparar sitio
-        shell: bash
-        run: |
-          rm -rf "$RUNNER_TEMP/casa-allegra-site"
-          mkdir -p "$RUNNER_TEMP/casa-allegra-site"
-          rsync -a --exclude '.git/' --exclude '.github/' --exclude 'node_modules/' --exclude 'dist/' ./ "$RUNNER_TEMP/casa-allegra-site/"
-          cat >> "$RUNNER_TEMP/casa-allegra-site/index.html" <<'HTML'
-<script src="./casa-allegra-enhancements.js"></script>
-<script src="./casa-allegra-ai.js"></script>
-<script src="./casa-allegra-store.js"></script>
-<script src="./casa-allegra-pagos-envios.js"></script>
-<script src="./casa-allegra-pro.js"></script>
-<script src="./casa-allegra-multishop.js"></script>
-<script src="./casa-allegra-pro-dashboard.js"></script>
-<script src="./casa-allegra-analytics.js"></script>
-HTML
-          touch "$RUNNER_TEMP/casa-allegra-site/.nojekyll"
-
-      - name: Configurar Pages
+      - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Subir sitio
-        uses: actions/upload-pages-artifact@v4
+      - name: Preparar sitio
+        run: |
+          touch .nojekyll
+
+      - name: Subir sitio a Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ runner.temp }}/casa-allegra-site
+          path: .
 
   deploy:
     needs: build
