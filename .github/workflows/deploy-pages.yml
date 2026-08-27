@@ -40,6 +40,19 @@ jobs:
           test -f casa-allegra-multishop.js
           test -f casa-allegra-pro-dashboard.js
           test -f casa-allegra-analytics.js
+          test -f integrations.js
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          tag='<script src="integrations.js?v=2"></script>'
+          if tag not in s:
+              marker='</body>'
+              if marker not in s:
+                  raise SystemExit('No se encontró </body> en index.html')
+              s=s.replace(marker, tag+'\n'+marker, 1)
+              p.write_text(s, encoding='utf-8')
+          PY
           touch .nojekyll
 
       - name: Crear artefacto de GitHub Pages
