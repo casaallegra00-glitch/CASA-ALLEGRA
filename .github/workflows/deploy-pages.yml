@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -20,38 +20,7 @@ jobs:
     steps:
       - name: Descargar proyecto
         uses: actions/checkout@v6
-      - name: Corregir logo fijo de CASA ALLEGRA en la app Next.js
-        shell: python
-        run: |
-          from pathlib import Path
-          p = Path("app/page.tsx")
-          s = p.read_text(encoding="utf-8")
-          old = '<span className="brand-mark">{brand.logo?<img src={brand.logo} alt="Logo" style={{width:38,height:38,objectFit:\'contain\',borderRadius:8}}/>:\'CA\'}</span><span>{displayName}</span>'
-          new = '<span className="brand-mark"><img src="/logo-casa-allegra.png" alt="Logo CASA ALLEGRA" style={{width:38,height:38,objectFit:"contain",borderRadius:8}}/></span><span>{displayName}</span>'
-          if old in s:
-              p.write_text(s.replace(old, new, 1), encoding="utf-8")
-          else:
-              print("El logo fijo ya está corregido o el código ya cambió.")
-      - name: Guardar corrección en GitHub
-        shell: bash
-        run: |
-          git config user.name "casaallegra00-glitch"
-          git config user.email "casa.allegra00@gmail.com"
-          if git diff --quiet -- app/page.tsx; then
-            echo "Sin cambios de logo para guardar."
-          else
-            git add app/page.tsx
-            git commit -m "Fix CASA ALLEGRA fixed logo in Next app"
-            git push
-          fi
-      - name: Eliminar workflow temporal
-        shell: bash
-        run: |
-          if [ -f .github/workflows/fix-casa-allegra-logo.yml ]; then
-            git rm .github/workflows/fix-casa-allegra-logo.yml
-            git commit -m "Remove temporary logo fix workflow"
-            git push
-          fi
+
       - name: Preparar sitio
         shell: bash
         run: |
@@ -64,18 +33,30 @@ jobs:
           p=Path(os.environ['RUNNER_TEMP'])/'casa-allegra-site'/'index.html'
           text=p.read_text(encoding='utf-8')
           marker='</body>'
-          scripts='''\n<script src="./casa-allegra-enhancements.js"></script>\n<script src="./casa-allegra-ai.js"></script>\n<script src="./casa-allegra-store.js"></script>\n<script src="./casa-allegra-pagos-envios.js"></script>\n<script src="./casa-allegra-pro.js"></script>\n<script src="./casa-allegra-multishop.js"></script>\n<script src="./casa-allegra-pro-dashboard.js"></script>\n<script src="./casa-allegra-analytics.js"></script>\n'''
+          scripts='''
+<script src="./casa-allegra-enhancements.js"></script>
+<script src="./casa-allegra-ai.js"></script>
+<script src="./casa-allegra-store.js"></script>
+<script src="./casa-allegra-pagos-envios.js"></script>
+<script src="./casa-allegra-pro.js"></script>
+<script src="./casa-allegra-multishop.js"></script>
+<script src="./casa-allegra-pro-dashboard.js"></script>
+<script src="./casa-allegra-analytics.js"></script>
+'''
           if 'casa-allegra-analytics.js' not in text:
               text=text.replace(marker, scripts+marker)
           p.write_text(text, encoding='utf-8')
           PY
           touch "$RUNNER_TEMP/casa-allegra-site/.nojekyll"
+
       - name: Configurar Pages
         uses: actions/configure-pages@v5
+
       - name: Subir sitio
         uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ runner.temp }}/casa-allegra-site
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
