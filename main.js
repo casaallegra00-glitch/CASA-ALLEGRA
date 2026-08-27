@@ -4,7 +4,9 @@ const fs = require('fs');
 const https = require('https');
 
 const isDev = !app.isPackaged;
-const APP_URL = process.env.CASA_ALLEGRA_APP_URL || 'https://casa-allegra.vercel.app';
+// Keep the desktop app on the same production deployment as the web app.
+// It can still be overridden for local development with CASA_ALLEGRA_APP_URL.
+const APP_URL = process.env.CASA_ALLEGRA_APP_URL || 'https://casa-allegra-buqutc2qq-casaallegra00-3587.vercel.app';
 
 function securePath(name) { return path.join(app.getPath('userData'), name); }
 function readSecure(name) {
@@ -37,7 +39,7 @@ function mpRequest(pathname, params='') {
 }
 function askOpenAI({ apiKey, model, message, context }) {
   return new Promise((resolve, reject) => {
-    const instructions = `Sos el asistente de gestión de CASA ALLEGRA, un negocio argentino de papelería y gráfica creativa. Respondé en español rioplatense, de forma clara, práctica y profesional. Ayudá con costos, precios, márgenes, catálogo, ventas, presupuestos, pedidos, stock, ideas, organización y métricas. No inventes datos del negocio: usá únicamente el contexto proporcionado y marcá cuando falte información. Cuando des recomendaciones comerciales, separá hechos de sugerencias. Contexto actual de CASA ALLEGRA:\n${JSON.stringify(context || {}, null, 2)}`;
+    const instructions = `Sos el asistente de gestión de CASA ALLEGRA, un negocio argentino de papelería y gráfica creativa. Respondé en español rioplatense, de forma clara, práctica y profesional. Ayudá con costos, precios, márgenes, catálogo, ventas, presupuestos, pedidos, stock, ideas, organización y métricas. No inventes datos del negocio: usá únicamente el contexto proporcionado y marcá cuando falte información. Contexto actual de CASA ALLEGRA:\n${JSON.stringify(context || {}, null, 2)}`;
     const body = JSON.stringify({ model: model || 'gpt-5', instructions, input: message, max_output_tokens: 900 });
     const req = https.request({ hostname: 'api.openai.com', path: '/v1/responses', method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, res => {
       let data = '';
