@@ -4,6 +4,7 @@ const fs = require('fs');
 const https = require('https');
 
 const isDev = !app.isPackaged;
+const APP_URL = process.env.CASA_ALLEGRA_APP_URL || 'https://casa-allegra.vercel.app';
 
 function securePath(name) { return path.join(app.getPath('userData'), name); }
 function readSecure(name) {
@@ -58,17 +59,12 @@ function askOpenAI({ apiKey, model, message, context }) {
 }
 function createWindow() {
   const iconPath = path.join(__dirname, 'icon-512.png');
-  const win = new BrowserWindow({ width: 1440, height: 920, minWidth: 1024, minHeight: 720, backgroundColor: '#f7f4ff', show: false, autoHideMenuBar: true, icon: iconPath, webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js'), sandbox: true, spellcheck: true, devTools: isDev } });
+  const win = new BrowserWindow({ width: 1440, height: 920, minWidth: 1024, minHeight: 720, backgroundColor: '#fbf8f5', show: false, autoHideMenuBar: true, icon: iconPath, webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js'), sandbox: true, spellcheck: true, devTools: isDev } });
   win.once('ready-to-show', () => win.show());
-  win.webContents.on('did-finish-load', () => {
-    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js','casa-allegra-pagos-envios.js','casa-allegra-pro.js','casa-allegra-multishop.js','casa-allegra-pro-dashboard.js','casa-allegra-analytics.js'];
-    const paths = files.map(name => `file://${path.join(__dirname, name).replace(/\\/g, '/')}`);
-    win.webContents.executeJavaScript(`(() => { for (const src of ${JSON.stringify(paths)}) { if (!document.querySelector('script[src="'+src+'"]')) { const s=document.createElement('script'); s.src=src; document.body.appendChild(s); } } })();`).catch(() => {});
-  });
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^(https?:|mailto:|tel:)/i.test(url)) shell.openExternal(url); return { action: 'deny' }; });
-  win.webContents.on('will-navigate', (event, url) => { const current = win.webContents.getURL(); const sameLocalApp = url.startsWith('file://') || url === current; if (!sameLocalApp) { event.preventDefault(); shell.openExternal(url); } });
+  win.webContents.on('will-navigate', (event, url) => { if (url.startsWith(APP_URL)) return; event.preventDefault(); if (/^(https?:|mailto:|tel:)/i.test(url)) shell.openExternal(url); });
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => callback(new Set(['notifications','clipboard-read','clipboard-sanitized-write']).has(permission)));
-  win.loadFile(path.join(__dirname, 'index.html'));
+  win.loadURL(APP_URL);
 }
 app.whenReady().then(() => {
   if (process.platform === 'win32' && app.isPackaged) app.setLoginItemSettings({ openAtLogin: true, name: 'CASA ALLEGRA' });
