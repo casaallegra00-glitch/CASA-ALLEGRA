@@ -27,13 +27,7 @@ jobs:
           rm -rf "$RUNNER_TEMP/casa-allegra-site"
           mkdir -p "$RUNNER_TEMP/casa-allegra-site"
           rsync -a --exclude '.git/' --exclude '.github/' --exclude 'node_modules/' --exclude 'dist/' ./ "$RUNNER_TEMP/casa-allegra-site/"
-          python - <<'PY'
-          import os
-          from pathlib import Path
-          p=Path(os.environ['RUNNER_TEMP'])/'casa-allegra-site'/'index.html'
-          text=p.read_text(encoding='utf-8')
-          marker='</body>'
-          scripts='''
+          cat >> "$RUNNER_TEMP/casa-allegra-site/index.html" <<'HTML'
 <script src="./casa-allegra-enhancements.js"></script>
 <script src="./casa-allegra-ai.js"></script>
 <script src="./casa-allegra-store.js"></script>
@@ -42,11 +36,7 @@ jobs:
 <script src="./casa-allegra-multishop.js"></script>
 <script src="./casa-allegra-pro-dashboard.js"></script>
 <script src="./casa-allegra-analytics.js"></script>
-'''
-          if 'casa-allegra-analytics.js' not in text:
-              text=text.replace(marker, scripts+marker)
-          p.write_text(text, encoding='utf-8')
-          PY
+HTML
           touch "$RUNNER_TEMP/casa-allegra-site/.nojekyll"
 
       - name: Configurar Pages
