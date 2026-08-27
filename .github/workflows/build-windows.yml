@@ -20,6 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Preparar npm
         shell: pwsh
@@ -56,15 +57,18 @@ jobs:
             exit 1
           }
 
+      - name: Verificar build web
+        run: npm run build
+
       - name: Generar instalador
         run: npm run dist
 
       - name: Verificar instalador
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path dist -Filter 'CASA-ALLEGRA-Setup-*-x64.exe' -File | Select-Object -First 1
+          $installer = Get-ChildItem -Path dist -Filter 'CASA-ALLEGRA-APP-Setup-*-x64.exe' -File | Select-Object -First 1
           if (-not $installer) {
-            Write-Error 'No se encontró el instalador CASA-ALLEGRA-Setup-*-x64.exe en dist.'
+            Write-Error 'No se encontró el instalador CASA-ALLEGRA-APP-Setup-*-x64.exe en dist.'
             exit 1
           }
           Write-Host "Instalador generado: $($installer.FullName)"
@@ -74,7 +78,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: CASA-ALLEGRA-Windows
-          path: dist/CASA-ALLEGRA-Setup-*-x64.exe
+          path: dist/CASA-ALLEGRA-APP-Setup-*-x64.exe
           if-no-files-found: error
 
       - name: Subir lockfile generado
