@@ -25,12 +25,40 @@ jobs:
       - name: Configurar GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Preparar sitio
+      - name: Preparar sitio CASA ALLEGRA
+        shell: bash
         run: |
+          set -e
           touch .nojekyll
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          scripts = [
+              'casa-allegra-enhancements.js',
+              'casa-allegra-ai.js',
+              'casa-allegra-store.js',
+              'casa-allegra-pagos-envios.js',
+              'casa-allegra-pro.js',
+              'casa-allegra-multishop.js',
+              'casa-allegra-pro-dashboard.js',
+              'casa-allegra-analytics.js',
+          ]
+          missing = [s for s in scripts if not Path(s).exists()]
+          if missing:
+              raise SystemExit('Faltan archivos de funciones CASA ALLEGRA: ' + ', '.join(missing))
+          additions = ''.join(f'<script src="./{s}"></script>\n' for s in scripts)
+          if 'casa-allegra-enhancements.js' not in text:
+              marker = '</body>'
+              if marker in text:
+                  text = text.replace(marker, additions + marker, 1)
+              else:
+                  text += '\n' + additions
+              p.write_text(text, encoding='utf-8')
+          PY
 
       - name: Subir sitio a Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: .
 
