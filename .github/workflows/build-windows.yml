@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          package-manager-cache: false
 
       - name: Preparar npm
         shell: pwsh
@@ -32,21 +32,19 @@ jobs:
             exit 1
           }
 
-      - name: Crear lockfile si falta
+      - name: Preparar dependencias
         shell: pwsh
         run: |
-          if (-not (Test-Path package-lock.json)) {
-            Write-Host 'No existe package-lock.json. Generando uno a partir de package.json...'
-            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          }
-          if (-not (Test-Path package-lock.json)) {
-            Write-Error 'No se pudo generar package-lock.json.'
+          npm install --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) {
+            Write-Error 'No se pudieron instalar las dependencias.'
             exit 1
           }
-          Write-Host 'package-lock.json listo.'
-
-      - name: Instalar dependencias
-        run: npm ci --no-audit --no-fund
+          if (-not (Test-Path package-lock.json)) {
+            Write-Error 'npm no pudo generar package-lock.json.'
+            exit 1
+          }
+          Write-Host 'Dependencias y package-lock.json listos.'
 
       - name: Verificar dependencias críticas
         shell: pwsh
