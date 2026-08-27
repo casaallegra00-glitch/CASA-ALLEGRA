@@ -32,8 +32,8 @@ jobs:
           p=Path(os.environ['RUNNER_TEMP'])/'casa-allegra-site'/'index.html'
           text=p.read_text(encoding='utf-8')
           marker='</body>'
-          scripts='''\n<script src="./casa-allegra-enhancements.js"></script>\n<script src="./casa-allegra-ai.js"></script>\n<script src="./casa-allegra-store.js"></script>\n<script src="./casa-allegra-pagos-envios.js"></script>\n<script src="./casa-allegra-pro.js"></script>\n<script src="./casa-allegra-multishop.js"></script>\n<script src="./casa-allegra-pro-dashboard.js"></script>\n'''
-          if 'casa-allegra-pro-dashboard.js' not in text:
+          scripts='''\n<script src="./casa-allegra-enhancements.js"></script>\n<script src="./casa-allegra-ai.js"></script>\n<script src="./casa-allegra-store.js"></script>\n<script src="./casa-allegra-pagos-envios.js"></script>\n<script src="./casa-allegra-pro.js"></script>\n<script src="./casa-allegra-multishop.js"></script>\n<script src="./casa-allegra-pro-dashboard.js"></script>\n<script src="./casa-allegra-analytics.js"></script>\n'''
+          if 'casa-allegra-analytics.js' not in text:
               text=text.replace(marker, scripts+marker)
           p.write_text(text, encoding='utf-8')
           PY
