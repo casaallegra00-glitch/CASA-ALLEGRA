@@ -60,7 +60,7 @@ function createWindow() {
   const win = new BrowserWindow({ width: 1440, height: 920, minWidth: 1024, minHeight: 720, backgroundColor: '#f7f4ff', show: false, autoHideMenuBar: true, icon: path.join(__dirname, 'icons', 'icon-512.png'), webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js'), sandbox: true, spellcheck: true, devTools: isDev } });
   win.once('ready-to-show', () => win.show());
   win.webContents.on('did-finish-load', () => {
-    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js','casa-allegra-pagos-envios.js'];
+    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js','casa-allegra-pagos-envios.js','casa-allegra-commerce.js'];
     const paths = files.map(name => `file://${path.join(__dirname, name).replace(/\\/g, '/')}`);
     win.webContents.executeJavaScript(`(() => { for (const src of ${JSON.stringify(paths)}) { const s=document.createElement('script'); s.src=src; document.body.appendChild(s); } })();`).catch(() => {});
   });
