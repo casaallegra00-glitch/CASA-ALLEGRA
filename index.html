@@ -28,6 +28,7 @@
       <button data-section="presupuestos">▤ <span>Presupuestos</span></button>
       <button data-section="pedidos">◷ <span>Pedidos</span></button>
       <button data-section="ideas">✦ <span>Ideas</span></button>
+      <button data-section="integraciones">🔗 <span>Integraciones</span></button>
       <button data-section="configuracion">⚙ <span>Configuración</span></button>
     </nav>
     <div class="sidebar-note">Uso interno · los datos se guardan en este dispositivo.</div>
@@ -82,6 +83,18 @@
 
     <section id="ideas" class="section"><div class="section-head"><div><h2>Ideas</h2><p>Guardá nuevos productos, campañas, procesos y contenidos.</p></div><button class="btn primary" onclick="openIdeaModal()">+ Nueva idea</button></div><div id="ideasGrid" class="ideas-grid"></div></section>
 
+    <section id="integraciones" class="section">
+      <div class="section-head"><div><h2>Integraciones</h2><p>Pagos, ventas y logística conectados con CASA ALLEGRA.</p></div></div>
+      <div class="grid three">
+        <div class="card panel"><div class="panel-head"><div><h3>💳 Mercado Pago</h3><span>Pagos online y estados de cobro</span></div><span class="badge">Preparado</span></div><p class="muted">Links de pago, referencias, importes y estados.</p><button class="btn primary" onclick="openIntegration('mercadopago')">Configurar</button></div>
+        <div class="card panel"><div class="panel-head"><div><h3>🛒 Mercado Libre</h3><span>Ventas y publicaciones</span></div><span class="badge">Preparado</span></div><p class="muted">SKU, publicaciones, compradores y pedidos.</p><button class="btn primary" onclick="openIntegration('mercadolibre')">Configurar</button></div>
+        <div class="card panel"><div class="panel-head"><div><h3>📦 Mercado Envíos</h3><span>Logística de Mercado Libre</span></div><span class="badge">Preparado</span></div><p class="muted">Shipment, tracking, estado y costo.</p><button class="btn primary" onclick="openIntegration('mercadoenvios')">Configurar</button></div>
+        <div class="card panel"><div class="panel-head"><div><h3>📮 Correo Argentino</h3><span>Despachos y seguimiento</span></div><span class="badge">Preparado</span></div><p class="muted">Tracking, estado, costo y entrega.</p><button class="btn primary" onclick="openIntegration('correoargentino')">Configurar</button></div>
+        <div class="card panel"><div class="panel-head"><div><h3>🚚 Andreani</h3><span>Envíos y entregas</span></div><span class="badge">Preparado</span></div><p class="muted">Despacho, tracking, estado y costo.</p><button class="btn primary" onclick="openIntegration('andreani')">Configurar</button></div>
+      </div>
+      <div class="card info-banner"><strong>Flujo integrado</strong><span>Presupuesto → Pago → Pedido → Envío → Entrega</span></div>
+    </section>
+
     <section id="configuracion" class="section"><div class="section-head"><div><h2>Configuración</h2><p>Una puesta a punto simple para empezar a trabajar.</p></div></div>
       <div class="settings-grid">
         <div class="card panel"><h3>Datos del negocio</h3><p class="muted">Estos datos aparecen en presupuestos y mensajes.</p><div class="form-grid"><label>Nombre<input id="sBusiness" class="input"></label><label>WhatsApp<input id="sPhone" class="input" placeholder="549..." inputmode="numeric"></label><label>Dirección<input id="sAddress" class="input"></label><label>Instagram / sitio<input id="sSocial" class="input" placeholder="@casallegra"></label></div><button class="btn primary" onclick="saveSettings()">Guardar cambios</button></div>
@@ -107,7 +120,10 @@
 
 <div id="helpModal" class="modal"><div class="modal-box"><div class="modal-head"><div><span class="eyebrow">AYUDA RÁPIDA</span><h3>Cómo empezar</h3></div><button class="icon-btn" onclick="closeModal('helpModal')">×</button></div><div class="help-list"><div><b>1. Configuración</b><span>Completá nombre, WhatsApp y gastos operativos.</span></div><div><b>2. Catálogo</b><span>Cargá productos con costo, margen y stock.</span></div><div><b>3. Presupuesto</b><span>Elegí productos, cantidades y compartí por WhatsApp.</span></div><div><b>4. Pedidos</b><span>Convertí un presupuesto en pedido y actualizá su estado.</span></div></div></div></div>
 
+<div id="integrationModal" class="modal"><div class="modal-box"><div class="modal-head"><div><span class="eyebrow">INTEGRACIÓN</span><h3 id="integrationTitle">Configurar integración</h3></div><button class="icon-btn" onclick="closeModal('integrationModal')">×</button></div><div class="form-grid"><label>Estado<select id="integrationEnabled" class="select"><option value="true">Activada</option><option value="false">Desactivada</option></select></label><label>Modo<select id="integrationMode" class="select"><option>Sandbox / Pruebas</option><option>Producción</option></select></label><label class="full">Referencia / identificador<input id="integrationRef" class="input" placeholder="Se conectará con la API oficial"></label><label class="full">Notas<textarea id="integrationNotes" class="textarea" rows="3"></textarea></label></div><div class="notice">La interfaz está preparada. Las credenciales privadas y las conexiones reales a cada API se agregan en la segunda etapa.</div><div class="modal-foot"><button class="btn" onclick="closeModal('integrationModal')">Cancelar</button><button class="btn primary" onclick="saveIntegration()">Guardar configuración</button></div></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
+<script src="integrations.js"></script>
 </body>
 </html>
