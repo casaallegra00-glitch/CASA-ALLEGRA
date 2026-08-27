@@ -64,7 +64,7 @@ function askOpenAI({ apiKey, model, message, context }) {
             .map(part => part.text)
             .join('\n');
           resolve(text || 'La IA no devolvió texto.');
-        } catch (e) {
+        } catch {
           reject(new Error('Respuesta inválida del servicio de IA.'));
         }
       });
@@ -99,16 +99,13 @@ function createWindow() {
   win.once('ready-to-show', () => win.show());
 
   win.webContents.on('did-finish-load', () => {
-    const aiPath = path.join(__dirname, 'casa-allegra-ai.js').replace(/\\/g, '/');
-    const safeUrl = `file://${aiPath}`;
-    win.webContents.executeJavaScript(`(() => { const s = document.createElement('script'); s.src = ${JSON.stringify(safeUrl)}; s.onload = () => window.dispatchEvent(new Event('casa-allegra-ai-ready')); document.head.appendChild(s); })();`).catch(() => {});
+    const files = ['casa-allegra-enhancements.js', 'casa-allegra-ai.js'];
+    const paths = files.map(name => `file://${path.join(__dirname, name).replace(/\\/g, '/')}`);
+    win.webContents.executeJavaScript(`(() => { const files = ${JSON.stringify(paths)}; files.forEach(src => { const s=document.createElement('script'); s.src=src; document.head.appendChild(s); }); })();`).catch(() => {});
   });
 
-  // Keep the app native: external sites (especially WhatsApp) open in the default browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^(https?:|mailto:|tel:)/i.test(url)) {
-      shell.openExternal(url);
-    }
+    if (/^(https?:|mailto:|tel:)/i.test(url)) shell.openExternal(url);
     return { action: 'deny' };
   });
 
@@ -131,10 +128,7 @@ function createWindow() {
 
 app.whenReady().then(() => {
   if (process.platform === 'win32' && app.isPackaged) {
-    app.setLoginItemSettings({
-      openAtLogin: true,
-      name: 'CASA ALLEGRA'
-    });
+    app.setLoginItemSettings({ openAtLogin: true, name: 'CASA ALLEGRA' });
   }
 
   ipcMain.handle('get-autostart', () => {
@@ -144,11 +138,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle('set-autostart', (_event, enabled) => {
     if (process.platform !== 'win32') return false;
-    app.setLoginItemSettings({
-      openAtLogin: Boolean(enabled),
-      name: 'CASA ALLEGRA',
-      enabled: true
-    });
+    app.setLoginItemSettings({ openAtLogin: Boolean(enabled), name: 'CASA ALLEGRA', enabled: true });
     return app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin;
   });
 
@@ -164,38 +154,25 @@ app.whenReady().then(() => {
     if (!apiKey) throw new Error('Configurá primero tu clave de OpenAI en ⚙ del Asistente IA.');
     const message = String(payload.message || '').trim();
     if (!message) throw new Error('Escribí una consulta.');
-    const context = payload.context || {};
-    return askOpenAI({ apiKey, model: payload.model || 'gpt-5', message, context });
+    return askOpenAI({ apiKey, model: payload.model || 'gpt-5', message, context: payload.context || {} });
   });
 
   const template = [
-    {
-      label: 'CASA ALLEGRA',
-      submenu: [
-        { label: 'Recargar', accelerator: 'CmdOrCtrl+R', click: (_m, w) => w?.reload() },
-        { type: 'separator' },
-        { role: 'quit', label: 'Salir de CASA ALLEGRA' }
-      ]
-    },
-    {
-      label: 'Ver',
-      submenu: [
-        { role: 'resetZoom', label: 'Tamaño normal' },
-        { role: 'zoomIn', label: 'Acercar' },
-        { role: 'zoomOut', label: 'Alejar' },
-        { type: 'separator' },
-        { role: 'togglefullscreen', label: 'Pantalla completa' }
-      ]
-    },
-    {
-      label: 'Ayuda',
-      submenu: [
-        {
-          label: 'Abrir carpeta de datos',
-          click: () => shell.openPath(app.getPath('userData'))
-        }
-      ]
-    }
+    { label: 'CASA ALLEGRA', submenu: [
+      { label: 'Recargar', accelerator: 'CmdOrCtrl+R', click: (_m, w) => w?.reload() },
+      { type: 'separator' },
+      { role: 'quit', label: 'Salir de CASA ALLEGRA' }
+    ]},
+    { label: 'Ver', submenu: [
+      { role: 'resetZoom', label: 'Tamaño normal' },
+      { role: 'zoomIn', label: 'Acercar' },
+      { role: 'zoomOut', label: 'Alejar' },
+      { type: 'separator' },
+      { role: 'togglefullscreen', label: 'Pantalla completa' }
+    ]},
+    { label: 'Ayuda', submenu: [
+      { label: 'Abrir carpeta de datos', click: () => shell.openPath(app.getPath('userData')) }
+    ]}
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
   createWindow();
