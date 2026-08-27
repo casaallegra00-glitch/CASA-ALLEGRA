@@ -1,26 +1,42 @@
 import { NextResponse } from 'next/server'
+import { decryptJson, tokenCookie } from '@/lib/integration-oauth'
 
-export async function GET() {
+type Credential = {
+  userId: string
+  accessToken: string
+  refreshToken?: string
+  expiresAt?: number
+  providerUserId?: string | number | null
+}
+
+function readCredential(request: Request) {
+  const raw = request.headers.get('cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${tokenCookie('mercadopago')}=`))?.split('=').slice(1).join('=')
+  return decryptJson<Credential>(raw)
+}
+
+export async function GET(request: Request) {
+  const credential = readCredential(request)
   return NextResponse.json({
     ok: true,
-    configured: Boolean(process.env.MERCADOPAGO_ACCESS_TOKEN),
+    configured: Boolean(credential?.accessToken),
+    connected: Boolean(credential?.accessToken),
     service: 'mercadopago',
   })
 }
 
 export async function POST(request: Request) {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN
+  const credential = readCredential(request)
 
-  if (!accessToken) {
+  if (!credential?.accessToken) {
     return NextResponse.json(
-      { ok: false, error: 'Mercado Pago no está configurado en Vercel.' },
-      { status: 503 },
+      { ok: false, error: 'Primero conectá tu propia cuenta de Mercado Pago.' },
+      { status: 401 },
     )
   }
 
   try {
     const body = await request.json()
-    const items = Array.isArray(body?.items) ? body.items : []
+    const items = Array.isArray(body?.items) ? body.items : [{ title: body?.title, quantity: body?.quantity, unit_price: body?.unit_price }]
 
     if (!items.length) {
       return NextResponse.json({ ok: false, error: 'Debe existir al menos un producto.' }, { status: 400 })
@@ -44,7 +60,7 @@ export async function POST(request: Request) {
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${credential.accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -60,7 +76,7 @@ export async function POST(request: Request) {
       cache: 'no-store',
     })
 
-    const data = await response.json()
+    const data = await response.json().catch(() => ({}))
 
     if (!response.ok) {
       return NextResponse.json(
