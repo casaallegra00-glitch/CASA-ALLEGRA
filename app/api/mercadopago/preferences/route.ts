@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: Request) {
-  const token = process.env.MERCADOPAGO_ACCESS_TOKEN
+  const token = process.env.mercadopago_access_token
   if (!token) {
     return NextResponse.json({ error: 'Mercado Pago no está configurado en Vercel.' }, { status: 503 })
   }
@@ -35,20 +35,24 @@ export async function POST(request: Request) {
     notification_url: `${origin}/api/mercadopago/webhook`,
   }
 
-  const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-    cache: 'no-store',
-  })
+  try {
+    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      cache: 'no-store',
+    })
 
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    return NextResponse.json({ error: 'Mercado Pago rechazó la preferencia.', details: data }, { status: 502 })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      return NextResponse.json({ error: 'Mercado Pago rechazó la preferencia.', details: data }, { status: 502 })
+    }
+
+    return NextResponse.json({ id: data.id, init_point: data.init_point, sandbox_init_point: data.sandbox_init_point })
+  } catch {
+    return NextResponse.json({ error: 'No fue posible comunicarse con Mercado Pago.' }, { status: 502 })
   }
-
-  return NextResponse.json({ id: data.id, init_point: data.init_point, sandbox_init_point: data.sandbox_init_point })
 }
