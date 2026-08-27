@@ -22,16 +22,17 @@ export default function IntegracionesPage() {
   const [checkoutUrl, setCheckoutUrl] = useState('')
   const [checkoutError, setCheckoutError] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
+  const [connecting, setConnecting] = useState<Provider | null>(null)
 
   useEffect(() => {
     let active = true
     const load = async () => {
-      const session = await supabase?.auth.getSession()
+      if (!supabase) { setLoggedIn(false); setStatus({ mercadopago: 'disconnected', mercadolibre: 'disconnected' }); return }
+      const { data } = await supabase.auth.getSession()
       if (!active) return
-      const accessToken = session?.data.session?.access_token || ''
+      const accessToken = data.session?.access_token || ''
       setLoggedIn(Boolean(accessToken))
-      const authHeaders: HeadersInit = {}
-      if (accessToken) authHeaders.Authorization = `Bearer ${accessToken}`
+      const authHeaders: Record<string, string> = accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
       const [mp, ml] = await Promise.all([
         fetch('/api/integraciones/mercadopago/status', { cache: 'no-store', headers: authHeaders }).then(r => r.json()).catch(() => ({ connected: false })),
         fetch('/api/integraciones/mercadolibre/status', { cache: 'no-store', headers: authHeaders }).then(r => r.json()).catch(() => ({ connected: false })),
@@ -47,14 +48,26 @@ export default function IntegracionesPage() {
   }, [])
 
   const connect = async (provider: Provider) => {
+    if (connecting) return
     setMessage('')
-    if (!supabase) { setMessage('La cuenta de CASA ALLEGRA no está configurada.'); return }
-    const { data } = await supabase.auth.getSession()
-    if (!data.session) { setMessage('Primero iniciá sesión en CASA ALLEGRA.'); return }
-    const response = await fetch(`/api/integraciones/${provider}/start`, { method: 'POST', headers: { Authorization: `Bearer ${data.session.access_token}` } })
-    const body = await response.json().catch(() => ({}))
-    if (!response.ok || !body.url) { setMessage(body.error || 'No se pudo iniciar la conexión.'); return }
-    window.location.href = body.url
+    setConnecting(provider)
+    try {
+      if (!supabase) throw new Error('La cuenta de CASA ALLEGRA no está configurada.')
+      const { data, error: sessionError } = await supabase.auth.getSession()
+      if (sessionError) throw new Error(`No se pudo obtener la sesión: ${sessionError.message}`)
+      if (!data.session) throw new Error('Primero iniciá sesión en CASA ALLEGRA.')
+      const response = await fetch(`/api/integraciones/${provider}/start`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${data.session.access_token}` },
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || `El servidor respondió ${response.status}.`)
+      if (!body.url || typeof body.url !== 'string') throw new Error('El servidor no devolvió la URL de autorización.')
+      window.location.assign(body.url)
+    } catch (error) {
+      setConnecting(null)
+      setMessage(error instanceof Error ? error.message : 'No se pudo iniciar la conexión.')
+    }
   }
 
   const createCheckout = async () => {
@@ -85,7 +98,7 @@ export default function IntegracionesPage() {
         <section style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', marginTop: 24 }}>
           {cards.map(card => <article key={card.name} style={{ padding: 22, background: '#fff', border: '1px solid #eadfe0', borderRadius: 18 }}>
             <div style={{ fontSize: 28 }}>{card.icon}</div><h2 style={{ margin: '8px 0' }}>{card.name}</h2><small>{card.kind}</small><p>{card.description}</p>
-            {card.provider ? <><strong>{statusLabel(card.provider)}</strong><div style={{ marginTop: 14 }}><button onClick={() => connect(card.provider!)} disabled={!loggedIn || status[card.provider!] === 'checking'}>{status[card.provider!] === 'connected' ? 'Administrar' : 'Conectar con 1 clic'}</button></div></> : <p><small>{card.note}</small></p>}
+            {card.provider ? <><strong>{statusLabel(card.provider)}</strong><div style={{ marginTop: 14 }}><button onClick={() => connect(card.provider!)} disabled={!loggedIn || connecting !== null || status[card.provider!] === 'checking'}>{connecting === card.provider ? 'Conectando…' : status[card.provider!] === 'connected' ? 'Administrar' : 'Conectar con 1 clic'}</button></div></> : <p><small>{card.note}</small></p>}
             {card.provider === 'mercadopago' && status.mercadopago === 'connected' && <div style={{ marginTop: 18 }}><label>Importe de prueba ARS <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal" /></label><button onClick={createCheckout} style={{ marginLeft: 8 }}>Crear checkout de prueba</button>{checkoutUrl && <p><a href={checkoutUrl} target="_blank" rel="noreferrer">Abrir Mercado Pago</a></p>}{checkoutError && <p style={{ color: '#b42318' }}>{checkoutError}</p>}</div>}
           </article>)}
         </section>
