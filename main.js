@@ -57,12 +57,13 @@ function askOpenAI({ apiKey, model, message, context }) {
   });
 }
 function createWindow() {
-  const win = new BrowserWindow({ width: 1440, height: 920, minWidth: 1024, minHeight: 720, backgroundColor: '#f7f4ff', show: false, autoHideMenuBar: true, icon: path.join(__dirname, 'icons', 'icon-512.png'), webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js'), sandbox: true, spellcheck: true, devTools: isDev } });
+  const iconPath = path.join(__dirname, 'icon-512.png');
+  const win = new BrowserWindow({ width: 1440, height: 920, minWidth: 1024, minHeight: 720, backgroundColor: '#f7f4ff', show: false, autoHideMenuBar: true, icon: iconPath, webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js'), sandbox: true, spellcheck: true, devTools: isDev } });
   win.once('ready-to-show', () => win.show());
   win.webContents.on('did-finish-load', () => {
-    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js','casa-allegra-pagos-envios.js','casa-allegra-pro.js','casa-allegra-multishop.js','casa-allegra-pro-dashboard.js'];
+    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js','casa-allegra-pagos-envios.js','casa-allegra-pro.js','casa-allegra-multishop.js','casa-allegra-pro-dashboard.js','casa-allegra-analytics.js'];
     const paths = files.map(name => `file://${path.join(__dirname, name).replace(/\\/g, '/')}`);
-    win.webContents.executeJavaScript(`(() => { for (const src of ${JSON.stringify(paths)}) { const s=document.createElement('script'); s.src=src; document.body.appendChild(s); } })();`).catch(() => {});
+    win.webContents.executeJavaScript(`(() => { for (const src of ${JSON.stringify(paths)}) { if (!document.querySelector('script[src="'+src+'"]')) { const s=document.createElement('script'); s.src=src; document.body.appendChild(s); } } })();`).catch(() => {});
   });
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^(https?:|mailto:|tel:)/i.test(url)) shell.openExternal(url); return { action: 'deny' }; });
   win.webContents.on('will-navigate', (event, url) => { const current = win.webContents.getURL(); const sameLocalApp = url.startsWith('file://') || url === current; if (!sameLocalApp) { event.preventDefault(); shell.openExternal(url); } });
@@ -72,7 +73,7 @@ function createWindow() {
 app.whenReady().then(() => {
   if (process.platform === 'win32' && app.isPackaged) app.setLoginItemSettings({ openAtLogin: true, name: 'CASA ALLEGRA' });
   ipcMain.handle('get-autostart', () => process.platform === 'win32' ? app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin : false);
-  ipcMain.handle('set-autostart', (_event, enabled) => { if (process.platform !== 'win32') return false; app.setLoginItemSettings({ openAtLogin: Boolean(enabled), name: 'CASA ALLEGRA', enabled: true }); return app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin; });
+  ipcMain.handle('set-autostart', (_event, enabled) => { if (process.platform !== 'win32') return false; app.setLoginItemSettings({ openAtLogin: Boolean(enabled), name: 'CASA ALLEGRA' }); return app.getLoginItemSettings({ name: 'CASA ALLEGRA' }).openAtLogin; });
   ipcMain.handle('ai-has-key', () => Boolean(readAIKey()));
   ipcMain.handle('ai-set-key', (_event, key) => { saveAIKey(String(key || '').trim()); return true; });
   ipcMain.handle('ai-chat', async (_event, payload = {}) => { const apiKey = readAIKey(); if (!apiKey) throw new Error('Configurá primero tu clave de OpenAI en ⚙ del Asistente IA.'); const message = String(payload.message || '').trim(); if (!message) throw new Error('Escribí una consulta.'); return askOpenAI({ apiKey, model: payload.model || 'gpt-5', message, context: payload.context || {} }); });
