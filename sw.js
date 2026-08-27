@@ -1,9 +1,9 @@
-const CACHE = 'casa-allegra-v3';
+const CACHE = 'casa-allegra-v4';
 const ASSETS = [
   './', './index.html', './styles.css', './app.js', './manifest.webmanifest',
-  './logo-casa-allegra.png', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
+  './logo-casa-allegra.png', './icon-192.png', './icon-512.png', './apple-touch-icon.png',
   './casa-allegra-enhancements.js', './casa-allegra-ai.js', './casa-allegra-store.js',
-  './casa-allegra-pagos-envios.js', './casa-allegra-pro.js', './casa-allegra-multishop.js'
+  './casa-allegra-pagos-envios.js', './casa-allegra-pro.js', './casa-allegra-multishop.js', './casa-allegra-pro-dashboard.js', './casa-allegra-analytics.js'
 ];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
