@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { decryptJson, getRedirectUri, cookieOptions, stateCookie, tokenCookie } from '@/lib/integration-oauth'
+import { decryptJson, encryptJson, getRedirectUri, cookieOptions, stateCookie, tokenCookie } from '@/lib/integration-oauth'
 
 type State = { userId: string; provider: string; createdAt: number }
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   if (!response.ok || !data.access_token) return NextResponse.redirect(new URL(`/integraciones?oauth_error=mercadopago&reason=${encodeURIComponent(data.message || data.error || 'token_exchange_failed')}`, url))
   const credential = { userId: saved.userId, provider: 'mercadopago', accessToken: data.access_token, refreshToken: data.refresh_token || '', expiresAt: Date.now() + Number(data.expires_in || 15552000) * 1000, providerUserId: data.user_id || null, publicKey: data.public_key || null }
   const redirect = NextResponse.redirect(new URL('/integraciones?oauth=mercadopago', url))
-  redirect.cookies.set(tokenCookie('mercadopago'), JSON.stringify(credential), { ...cookieOptions(), httpOnly: true })
+  redirect.cookies.set(tokenCookie('mercadopago'), encryptJson(credential), cookieOptions())
   redirect.cookies.set(stateCookie('mercadopago'), '', cookieOptions(0))
   return redirect
 }
