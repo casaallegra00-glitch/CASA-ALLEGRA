@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 
 type Provider = 'mercadopago' | 'mercadolibre'
 type Status = 'checking' | 'connected' | 'disconnected'
-
 type Card = { icon: string; name: string; kind: string; description: string; provider?: Provider; note?: string }
 
 const cards: Card[] = [
@@ -31,7 +30,8 @@ export default function IntegracionesPage() {
       if (!active) return
       const accessToken = session?.data.session?.access_token || ''
       setLoggedIn(Boolean(accessToken))
-      const authHeaders = accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
+      const authHeaders: HeadersInit = {}
+      if (accessToken) authHeaders.Authorization = `Bearer ${accessToken}`
       const [mp, ml] = await Promise.all([
         fetch('/api/integraciones/mercadopago/status', { cache: 'no-store', headers: authHeaders }).then(r => r.json()).catch(() => ({ connected: false })),
         fetch('/api/integraciones/mercadolibre/status', { cache: 'no-store', headers: authHeaders }).then(r => r.json()).catch(() => ({ connected: false })),
@@ -78,18 +78,17 @@ export default function IntegracionesPage() {
   return (
     <main style={{ minHeight: '100vh', padding: 32, background: '#fffaf7', color: '#3c3441' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
-        <a href="/" style={{ display: 'inline-block', marginBottom: 20, textDecoration: 'none', color: '#3c3441', fontWeight: 800 }}>← Volver a CASA ALLEGRA</a>
-        <div style={{ marginBottom: 24 }}><div style={{ fontSize: 12, letterSpacing: '.12em', fontWeight: 800, color: '#36aeb2' }}>CASA ALLEGRA APP</div><h1 style={{ margin: '6px 0 8px', fontSize: 36 }}>🔗 Conexiones de tu negocio</h1><p style={{ margin: 0, color: '#7d7381', lineHeight: 1.6 }}>Cada usuario conecta sus propias cuentas. CASA ALLEGRA no comparte tus cuentas con otros usuarios.</p></div>
-        {!loggedIn && <div style={{ padding: 16, marginBottom: 18, borderRadius: 16, background: '#fff4e8', color: '#76583f', fontWeight: 700 }}>🔐 Iniciá sesión para conectar cuentas externas. La conexión queda asociada a tu usuario de CASA ALLEGRA.</div>}
-        {message && <div style={{ padding: 14, marginBottom: 18, borderRadius: 14, background: message.startsWith('No se') || message.startsWith('Primero') ? '#fff0f0' : '#eaf8f0', color: '#4f7f64', fontWeight: 700 }}>{message}</div>}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(215px,1fr))', gap: 16 }}>
-          {cards.map(card => {
-            const providerStatus = card.provider ? statusLabel(card.provider) : card.name === 'Mercado Envíos' && status.mercadolibre === 'connected' ? '● Disponible con Mercado Libre' : card.note || '○ Preparación'
-            return <article key={card.name} style={{ background: '#fff', border: '1px solid #eee4ef', borderRadius: 20, padding: 20, minHeight: 260, boxShadow: '0 15px 45px rgba(67,43,88,.09)', display: 'flex', flexDirection: 'column' }}><div style={{ fontSize: 34 }}>{card.icon}</div><span style={{ marginTop: 10, alignSelf: 'flex-start', padding: '5px 8px', borderRadius: 999, background: '#eaf8f7', color: '#337d80', fontSize: 10, fontWeight: 800 }}>{card.kind}</span><h2 style={{ margin: '10px 0 8px', fontSize: 20 }}>{card.name}</h2><p style={{ margin: 0, color: '#7d7381', lineHeight: 1.5, fontSize: 13 }}>{card.description}</p><div style={{ marginTop: 12, fontSize: 11, fontWeight: 800, color: providerStatus.startsWith('●') ? '#4f946f' : '#9a8f9d' }}>{providerStatus}</div>{card.provider ? <button type="button" onClick={() => connect(card.provider!)} style={{ marginTop: 'auto', border: 0, borderRadius: 13, padding: '12px 14px', background: '#63c7c9', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>{status[card.provider] === 'connected' ? 'Administrar conexión' : 'Conectar con 1 clic'}</button> : <button type="button" onClick={() => setMessage(card.note || 'Esta conexión se implementará con las credenciales del proveedor.')} style={{ marginTop: 'auto', border: '1px solid #eee4ef', borderRadius: 13, padding: '12px 14px', background: '#fff', color: '#3c3441', fontWeight: 800, cursor: 'pointer' }}>Ver cómo conectar</button>}</article>
-          })}
-        </div>
-        <section style={{ marginTop: 18, background: '#fff', border: '1px solid #eee4ef', borderRadius: 20, padding: 20 }}><h2 style={{ margin: 0 }}>💳 Checkout Pro con la cuenta del usuario</h2><p style={{ color: '#7d7381', lineHeight: 1.55 }}>Una vez conectado Mercado Pago, los cobros de este usuario se crean usando su propia autorización OAuth, no el Access Token global de CASA ALLEGRA.</p><div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'end' }}><label style={{ fontSize: 12, fontWeight: 800 }}>Importe ARS<input value={amount} onChange={e => setAmount(e.target.value)} style={{ display: 'block', marginTop: 5, width: 150, border: '1px solid #e9dfea', borderRadius: 12, padding: '10px 12px' }} /></label><button type="button" onClick={createCheckout} disabled={status.mercadopago !== 'connected'} style={{ border: 0, borderRadius: 13, padding: '11px 14px', background: status.mercadopago === 'connected' ? '#63c7c9' : '#cfc7d1', color: '#fff', fontWeight: 800 }}>Crear checkout de prueba</button>{checkoutUrl && <a href={checkoutUrl} target="_blank" rel="noreferrer" style={{ borderRadius: 13, padding: '11px 14px', background: '#f8f3fa', color: '#3c3441', fontWeight: 800, textDecoration: 'none' }}>Abrir Mercado Pago</a>}</div>{checkoutError && <div style={{ marginTop: 12, padding: 10, borderRadius: 12, background: '#fff0f0', color: '#a34d4d', fontSize: 12 }}>{checkoutError}</div>}</section>
-        <section style={{ marginTop: 18, background: '#fff', border: '1px solid #eee4ef', borderRadius: 20, padding: 18 }}><strong>🔐 Cómo funciona</strong><div style={{ marginTop: 12, display: 'grid', gap: 8, color: '#6f6673', fontSize: 13 }}><div>1. El usuario inicia sesión en CASA ALLEGRA.</div><div>2. Pulsa <b>Conectar con 1 clic</b>.</div><div>3. Mercado Pago o Mercado Libre muestra su propia pantalla de autorización.</div><div>4. El usuario acepta y vuelve automáticamente a CASA ALLEGRA.</div><div>5. La conexión queda cifrada en servidor y asociada al usuario para poder usarla desde otros dispositivos.</div></div></section>
+        <h1 style={{ fontSize: 34, marginBottom: 8 }}>Integraciones</h1>
+        <p style={{ color: '#6f6570' }}>Conectá las cuentas de cada negocio a CASA ALLEGRA.</p>
+        {!loggedIn && <p style={{ padding: 12, background: '#fff0d9', borderRadius: 10 }}>Iniciá sesión para conectar servicios.</p>}
+        {message && <p style={{ padding: 12, background: '#eaf8ed', borderRadius: 10 }}>{message}</p>}
+        <section style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', marginTop: 24 }}>
+          {cards.map(card => <article key={card.name} style={{ padding: 22, background: '#fff', border: '1px solid #eadfe0', borderRadius: 18 }}>
+            <div style={{ fontSize: 28 }}>{card.icon}</div><h2 style={{ margin: '8px 0' }}>{card.name}</h2><small>{card.kind}</small><p>{card.description}</p>
+            {card.provider ? <><strong>{statusLabel(card.provider)}</strong><div style={{ marginTop: 14 }}><button onClick={() => connect(card.provider!)} disabled={!loggedIn || status[card.provider!] === 'checking'}>{status[card.provider!] === 'connected' ? 'Administrar' : 'Conectar con 1 clic'}</button></div></> : <p><small>{card.note}</small></p>}
+            {card.provider === 'mercadopago' && status.mercadopago === 'connected' && <div style={{ marginTop: 18 }}><label>Importe de prueba ARS <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal" /></label><button onClick={createCheckout} style={{ marginLeft: 8 }}>Crear checkout de prueba</button>{checkoutUrl && <p><a href={checkoutUrl} target="_blank" rel="noreferrer">Abrir Mercado Pago</a></p>}{checkoutError && <p style={{ color: '#b42318' }}>{checkoutError}</p>}</div>}
+          </article>)}
+        </section>
       </div>
     </main>
   )
