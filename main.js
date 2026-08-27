@@ -5,20 +5,34 @@ const https = require('https');
 
 const isDev = !app.isPackaged;
 
-function aiKeyPath() { return path.join(app.getPath('userData'), 'ai-key.json'); }
-function readAIKey() {
+function securePath(name) { return path.join(app.getPath('userData'), name); }
+function readSecure(name) {
   try {
-    const raw = JSON.parse(fs.readFileSync(aiKeyPath(), 'utf8'));
+    const raw = JSON.parse(fs.readFileSync(securePath(name), 'utf8'));
     if (raw.encrypted && safeStorage.isEncryptionAvailable()) return safeStorage.decryptString(Buffer.from(raw.encrypted, 'base64'));
-    return '';
-  } catch { return ''; }
+  } catch {}
+  return '';
 }
-function saveAIKey(key) {
-  if (!key) { try { fs.rmSync(aiKeyPath(), { force: true }); } catch {} return true; }
+function writeSecure(name, value) {
+  if (!value) { try { fs.rmSync(securePath(name), { force: true }); } catch {} return true; }
   if (!safeStorage.isEncryptionAvailable()) throw new Error('El cifrado seguro de Windows no está disponible en este equipo.');
-  const encrypted = safeStorage.encryptString(key).toString('base64');
-  fs.writeFileSync(aiKeyPath(), JSON.stringify({ encrypted }), 'utf8');
+  const encrypted = safeStorage.encryptString(value).toString('base64');
+  fs.writeFileSync(securePath(name), JSON.stringify({ encrypted }), 'utf8');
   return true;
+}
+function readAIKey(){return readSecure('ai-key.json');}
+function saveAIKey(key){return writeSecure('ai-key.json',key);}
+function readMPToken(){return readSecure('mercadopago-token.json');}
+function saveMPToken(token){return writeSecure('mercadopago-token.json',token);}
+function mpRequest(pathname, params='') {
+  return new Promise((resolve,reject)=>{
+    const token=readMPToken();
+    if(!token) return reject(new Error('Configurá primero tu Access Token de Mercado Pago.'));
+    const req=https.request({hostname:'api.mercadopago.com',path:`${pathname}${params}`,method:'GET',headers:{Authorization:`Bearer ${token}`,Accept:'application/json'}},res=>{
+      let data='';res.setEncoding('utf8');res.on('data',c=>data+=c);res.on('end',()=>{try{const json=JSON.parse(data);if(res.statusCode<200||res.statusCode>=300)return reject(new Error(json?.message||json?.error||`Mercado Pago devolvió HTTP ${res.statusCode}.`));resolve(json)}catch{return reject(new Error('Respuesta inválida de Mercado Pago.'))}});
+    });
+    req.on('error',e=>reject(new Error(`No se pudo conectar con Mercado Pago: ${e.message}`)));req.setTimeout(30000,()=>req.destroy(new Error('La consulta a Mercado Pago tardó demasiado.')));req.end();
+  });
 }
 function askOpenAI({ apiKey, model, message, context }) {
   return new Promise((resolve, reject) => {
@@ -46,7 +60,7 @@ function createWindow() {
   const win = new BrowserWindow({ width: 1440, height: 920, minWidth: 1024, minHeight: 720, backgroundColor: '#f7f4ff', show: false, autoHideMenuBar: true, icon: path.join(__dirname, 'icons', 'icon-512.png'), webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(__dirname, 'preload.js'), sandbox: true, spellcheck: true, devTools: isDev } });
   win.once('ready-to-show', () => win.show());
   win.webContents.on('did-finish-load', () => {
-    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js'];
+    const files = ['casa-allegra-enhancements.js','casa-allegra-ai.js','casa-allegra-store.js','casa-allegra-pagos-envios.js'];
     const paths = files.map(name => `file://${path.join(__dirname, name).replace(/\\/g, '/')}`);
     win.webContents.executeJavaScript(`(() => { for (const src of ${JSON.stringify(paths)}) { const s=document.createElement('script'); s.src=src; document.body.appendChild(s); } })();`).catch(() => {});
   });
@@ -62,6 +76,9 @@ app.whenReady().then(() => {
   ipcMain.handle('ai-has-key', () => Boolean(readAIKey()));
   ipcMain.handle('ai-set-key', (_event, key) => { saveAIKey(String(key || '').trim()); return true; });
   ipcMain.handle('ai-chat', async (_event, payload = {}) => { const apiKey = readAIKey(); if (!apiKey) throw new Error('Configurá primero tu clave de OpenAI en ⚙ del Asistente IA.'); const message = String(payload.message || '').trim(); if (!message) throw new Error('Escribí una consulta.'); return askOpenAI({ apiKey, model: payload.model || 'gpt-5', message, context: payload.context || {} }); });
+  ipcMain.handle('mp-has-token', () => Boolean(readMPToken()));
+  ipcMain.handle('mp-set-token', (_event, token) => { saveMPToken(String(token || '').trim()); return true; });
+  ipcMain.handle('mp-list-payments', async () => { const r=await mpRequest('/v1/payments/search','?sort=date_created&criteria=desc&range=date_created&begin_date=2020-01-01T00:00:00.000-03:00&end_date='+encodeURIComponent(new Date().toISOString())+'&limit=30'); return r.results||[]; });
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: 'CASA ALLEGRA', submenu: [{ label: 'Recargar', accelerator: 'CmdOrCtrl+R', click: (_m, w) => w?.reload() }, { type: 'separator' }, { role: 'quit', label: 'Salir de CASA ALLEGRA' }] },
     { label: 'Ver', submenu: [{ role: 'resetZoom', label: 'Tamaño normal' }, { role: 'zoomIn', label: 'Acercar' }, { role: 'zoomOut', label: 'Alejar' }, { type: 'separator' }, { role: 'togglefullscreen', label: 'Pantalla completa' }] },
