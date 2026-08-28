@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { authorizationUrl, cookieOptions, encryptJson, stateCookie } from '@/lib/integration-oauth'
+import { authorizationUrl, encryptJson } from '@/lib/integration-oauth'
 
 export async function POST(request: Request) {
   const auth = request.headers.get('authorization') || ''
@@ -13,9 +13,7 @@ export async function POST(request: Request) {
   if (error || !data.user) return NextResponse.json({ error: 'La sesión de CASA ALLEGRA no es válida.' }, { status: 401 })
   try {
     const state = encryptJson({ userId: data.user.id, provider: 'mercadolibre', createdAt: Date.now() })
-    const response = NextResponse.json({ url: authorizationUrl('mercadolibre', request, state) })
-    response.cookies.set(stateCookie('mercadolibre'), state, cookieOptions(10 * 60))
-    return response
+    return NextResponse.json({ url: authorizationUrl('mercadolibre', request, state) })
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Mercado Libre OAuth no está configurado.' }, { status: 503 })
   }
