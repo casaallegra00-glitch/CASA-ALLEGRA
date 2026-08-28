@@ -70,3 +70,7 @@ export function tokenCookie(provider: IntegrationProvider) {
 export function stateCookie(provider: IntegrationProvider) {
   return `casa_allegra_${provider}_oauth_state`
 }
+
+export function statePayloadCookie(provider: IntegrationProvider) {
+  return `casa_allegra_${provider}_oauth_payload`
+}
