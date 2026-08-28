@@ -25,7 +25,21 @@ export async function GET(request: Request) {
   const clientSecret = process.env.mercadopago_client_secret
   if (!clientId || !clientSecret) return NextResponse.redirect(new URL('/integraciones?oauth_error=mercadopago&reason=server_not_configured', url))
 
-  const response = await fetch('https://api.mercadopago.com/oauth/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, grant_type: 'authorization_code', code, redirect_uri: getRedirectUri(request, 'mercadopago') }), cache: 'no-store' })
+  const redirectUri = getRedirectUri(request, 'mercadopago')
+  const tokenParams = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: redirectUri,
+  })
+
+  const response = await fetch('https://api.mercadopago.com/oauth/token', {
+    method: 'POST',
+    headers: { accept: 'application/json', 'content-type': 'application/x-www-form-urlencoded' },
+    body: tokenParams.toString(),
+    cache: 'no-store',
+  })
   const data = await response.json().catch(() => ({}))
   if (!response.ok || !data.access_token) return NextResponse.redirect(new URL(`/integraciones?oauth_error=mercadopago&reason=${encodeURIComponent(data.message || data.error || 'token_exchange_failed')}`, url))
 
