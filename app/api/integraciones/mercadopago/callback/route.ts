@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { decryptJson, encryptJson, getRedirectUri, cookieOptions, tokenCookie } from '@/lib/integration-oauth'
+import { decryptJson, getRedirectUri } from '@/lib/integration-oauth'
 import { saveIntegrationCredential } from '@/lib/integration-store'
 
 type State = { userId: string; provider: string; createdAt: number }
@@ -12,8 +12,6 @@ export async function GET(request: Request) {
 
   if (error) return NextResponse.redirect(new URL(`/integraciones?oauth_error=mercadopago&reason=${encodeURIComponent(error)}`, url))
 
-  // The state is an authenticated/encrypted payload created by CASA ALLEGRA itself.
-  // This avoids relying on a browser cookie surviving the round trip through Mercado Pago.
   const saved = decryptJson<State>(state)
   if (!code || !state || !saved || saved.provider !== 'mercadopago' || !saved.userId || saved.createdAt < Date.now() - 10 * 60 * 1000) {
     return NextResponse.redirect(new URL('/integraciones?oauth_error=mercadopago&reason=invalid_state', url))
@@ -41,10 +39,17 @@ export async function GET(request: Request) {
   const data = await response.json().catch(() => ({}))
   if (!response.ok || !data.access_token) return NextResponse.redirect(new URL(`/integraciones?oauth_error=mercadopago&reason=${encodeURIComponent(data.message || data.error || 'token_exchange_failed')}`, url))
 
-  const credential = { userId: saved.userId, provider: 'mercadopago' as const, accessToken: data.access_token, refreshToken: data.refresh_token || '', expiresAt: Date.now() + Number(data.expires_in || 15552000) * 1000, providerUserId: data.user_id || null, publicKey: data.public_key || null }
+  const credential = {
+    userId: saved.userId,
+    provider: 'mercadopago' as const,
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || '',
+    expiresAt: Date.now() + Number(data.expires_in || 15552000) * 1000,
+    providerUserId: data.user_id || null,
+    publicKey: data.public_key || null,
+  }
+
   if (!await saveIntegrationCredential(credential)) return NextResponse.redirect(new URL('/integraciones?oauth_error=mercadopago&reason=database_not_configured', url))
 
-  const redirect = NextResponse.redirect(new URL('/integraciones?oauth=mercadopago', url))
-  redirect.cookies.set(tokenCookie('mercadopago'), encryptJson(credential), cookieOptions())
-  return redirect
+  return NextResponse.redirect(new URL('/integraciones?oauth=mercadopago', url))
 }
