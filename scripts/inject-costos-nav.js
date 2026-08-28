@@ -5,7 +5,7 @@ const file = path.join(process.cwd(), 'app', 'page.tsx')
 let source = fs.readFileSync(file, 'utf8')
 
 const marker = 'data-costos-nav'
-const old = /<button data-costos-nav className="side-costos" onClick=\{\(\)=>\{window\.location\.href="\/costos"\}\}>🧮 Calculadora de costos<\/button>/
+const old = '<button data-costos-nav className="side-costos" onClick={()=>{window.location.href="/costos"}}>🧮 Calculadora de costos</button>'
 const button = '<button data-costos-nav className="side-costos" onClick={()=>{window.location.href="/costos"}}><Icon name="calculator" size={19}/>Calculadora de costos</button>'
 
 if (source.includes(old)) {
