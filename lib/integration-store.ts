@@ -3,12 +3,17 @@ import { encryptJson, decryptJson } from '@/lib/integration-oauth'
 
 export type StoredCredential = {
   userId: string
-  provider: 'mercadopago' | 'mercadolibre'
+  provider: 'mercadopago' | 'mercadolibre' | 'andreani' | 'correoargentino'
   accessToken: string
   refreshToken?: string
   expiresAt?: number
   providerUserId?: string | number | null
   publicKey?: string | null
+  username?: string | null
+  password?: string | null
+  contract?: string | null
+  clientCode?: string | null
+  apiKey?: string | null
 }
 
 function admin() {
