@@ -27,9 +27,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             })();`,
           }}
         />
-        <a href="/integraciones" aria-label="Abrir Integraciones" style={{position:'fixed',left:18,bottom:18,zIndex:9999,display:'inline-flex',alignItems:'center',gap:8,padding:'12px 14px',borderRadius:14,background:'#ffffff',color:'#3c3441',border:'1px solid #eee4ef',boxShadow:'0 10px 28px rgba(67,43,88,.14)',textDecoration:'none',fontWeight:800,fontSize:13}}>
-          🔗 Integraciones
-        </a>
         {children}
       </body>
     </html>
