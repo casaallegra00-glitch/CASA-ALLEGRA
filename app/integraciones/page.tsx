@@ -8,8 +8,8 @@ type Status = 'checking' | 'connected' | 'disconnected'
 type Card = { icon: string; name: string; kind: string; description: string; provider?: Provider; note?: string }
 
 const cards: Card[] = [
-  { icon: '💳', name: 'Mercado Pago', kind: 'Pagos', description: 'Cada usuario autoriza su propia cuenta para cobrar con Checkout Pro.', provider: 'mercadopago' },
-  { icon: '🛒', name: 'Mercado Libre', kind: 'Marketplace', description: 'Cada usuario autoriza su propia cuenta para publicaciones, ventas y compradores.', provider: 'mercadolibre' },
+  { icon: '💳', name: 'Mercado Pago', kind: 'Pagos', description: 'Cada negocio conecta su propia cuenta de Mercado Pago. CASA ALLEGRA no usa la cuenta personal del administrador para cobrar.', provider: 'mercadopago' },
+  { icon: '🛒', name: 'Mercado Libre', kind: 'Marketplace', description: 'Cada negocio autoriza su propia cuenta para publicaciones, ventas y compradores.', provider: 'mercadolibre' },
   { icon: '📦', name: 'Mercado Envíos', kind: 'Envíos', description: 'Se habilita con la cuenta de Mercado Libre conectada y permite trabajar sobre sus envíos.', note: 'Vinculado a Mercado Libre' },
   { icon: '📮', name: 'Correo Argentino', kind: 'Correo', description: 'Estructura preparada para credenciales/API de cada negocio.', note: 'Requiere alta/credenciales del proveedor' },
   { icon: '🚚', name: 'Andreani', kind: 'Logística', description: 'Estructura preparada para credenciales/API de cada negocio.', note: 'Requiere alta/credenciales del proveedor' },
@@ -23,6 +23,7 @@ export default function IntegracionesPage() {
   const [checkoutError, setCheckoutError] = useState('')
   const [loggedIn, setLoggedIn] = useState(false)
   const [connecting, setConnecting] = useState<Provider | null>(null)
+  const [disconnecting, setDisconnecting] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -49,7 +50,7 @@ export default function IntegracionesPage() {
   }, [])
 
   const connect = async (provider: Provider) => {
-    if (connecting) return
+    if (connecting || disconnecting) return
     setMessage('')
     setConnecting(provider)
     try {
@@ -68,6 +69,30 @@ export default function IntegracionesPage() {
     } catch (error) {
       setConnecting(null)
       setMessage(error instanceof Error ? error.message : 'No se pudo iniciar la conexión.')
+    }
+  }
+
+  const disconnectMercadoPago = async () => {
+    if (disconnecting || connecting) return
+    setDisconnecting(true)
+    setCheckoutUrl('')
+    setCheckoutError('')
+    try {
+      const session = await supabase?.auth.getSession()
+      const accessToken = session?.data.session?.access_token
+      if (!accessToken) throw new Error('Iniciá sesión en CASA ALLEGRA para desconectar Mercado Pago.')
+      const response = await fetch('/api/integraciones/mercadopago/disconnect', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(body.error || `El servidor respondió ${response.status}.`)
+      setStatus(current => ({ ...current, mercadopago: 'disconnected' }))
+      setMessage('Mercado Pago fue desconectado de tu usuario de CASA ALLEGRA. Los pagos de otros negocios no utilizan esta cuenta.')
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'No se pudo desconectar Mercado Pago.')
+    } finally {
+      setDisconnecting(false)
     }
   }
 
@@ -93,13 +118,13 @@ export default function IntegracionesPage() {
     <main style={{ minHeight: '100vh', padding: 32, background: '#fffaf7', color: '#3c3441' }}>
       <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <h1 style={{ fontSize: 34, marginBottom: 8 }}>Integraciones</h1>
-        <p style={{ color: '#6f6570' }}>Conectá las cuentas de cada negocio a CASA ALLEGRA.</p>
-        {!loggedIn && <p style={{ padding: 12, background: '#fff0d9', borderRadius: 10 }}>Iniciá sesión para conectar servicios. Los botones permanecen disponibles para mostrarte el motivo exacto si falta configuración.</p>}
+        <p style={{ color: '#6f6570' }}>Cada usuario de CASA ALLEGRA conecta las cuentas de su propio negocio. La cuenta personal del administrador no se utiliza para cobrar a otros negocios.</p>
+        {!loggedIn && <p style={{ padding: 12, background: '#fff0d9', borderRadius: 10 }}>Iniciá sesión para conectar servicios.</p>}
         {message && <p style={{ padding: 12, background: '#eaf8ed', borderRadius: 10 }}>{message}</p>}
         <section style={{ display: 'grid', gap: 16, gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', marginTop: 24 }}>
           {cards.map(card => <article key={card.name} style={{ padding: 22, background: '#fff', border: '1px solid #eadfe0', borderRadius: 18 }}>
             <div style={{ fontSize: 28 }}>{card.icon}</div><h2 style={{ margin: '8px 0' }}>{card.name}</h2><small>{card.kind}</small><p>{card.description}</p>
-            {card.provider ? <><strong>{statusLabel(card.provider)}</strong><div style={{ marginTop: 14 }}><button type="button" onClick={() => connect(card.provider!)} disabled={connecting !== null || status[card.provider!] === 'checking'}>{connecting === card.provider ? 'Conectando…' : status[card.provider!] === 'connected' ? 'Administrar' : 'Conectar con 1 clic'}</button></div></> : <p><small>{card.note}</small></p>}
+            {card.provider ? <><strong>{statusLabel(card.provider)}</strong><div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}><button type="button" onClick={() => connect(card.provider!)} disabled={connecting !== null || disconnecting || status[card.provider!] === 'checking'}>{connecting === card.provider ? 'Conectando…' : status[card.provider!] === 'connected' ? 'Volver a autorizar' : 'Conectar cuenta del negocio'}</button>{card.provider === 'mercadopago' && status.mercadopago === 'connected' && <button type="button" onClick={disconnectMercadoPago} disabled={disconnecting || connecting !== null}>{disconnecting ? 'Desconectando…' : 'Desconectar esta cuenta'}</button>}</div></> : <p><small>{card.note}</small></p>}
             {card.provider === 'mercadopago' && status.mercadopago === 'connected' && <div style={{ marginTop: 18 }}><label>Importe de prueba ARS <input value={amount} onChange={e => setAmount(e.target.value)} inputMode="decimal" /></label><button type="button" onClick={createCheckout} style={{ marginLeft: 8 }}>Crear checkout de prueba</button>{checkoutUrl && <p><a href={checkoutUrl} target="_blank" rel="noreferrer">Abrir Mercado Pago</a></p>}{checkoutError && <p style={{ color: '#b42318' }}>{checkoutError}</p>}</div>}
           </article>)}
         </section>
