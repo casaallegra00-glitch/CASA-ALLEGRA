@@ -36,8 +36,8 @@ export function cookieOptions(maxAge = 60 * 60 * 24 * 180) {
 }
 
 export function getRedirectUri(request: Request, provider: IntegrationProvider) {
-  const configured = process.env.integration_public_url || new URL(request.url).origin
-  return `${configured}/api/integraciones/${provider}/callback`
+  const configured = process.env.integration_public_url || 'https://casa-allegra.vercel.app'
+  return `${configured.replace(/\/$/, '')}/api/integraciones/${provider}/callback`
 }
 
 export function authorizationUrl(provider: IntegrationProvider, request: Request, state: string) {
