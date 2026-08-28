@@ -1,24 +1,21 @@
 import { NextResponse } from 'next/server'
-import { decryptJson, encryptJson, getRedirectUri, cookieOptions, stateCookie, statePayloadCookie, tokenCookie } from '@/lib/integration-oauth'
+import { decryptJson, encryptJson, getRedirectUri, cookieOptions, tokenCookie } from '@/lib/integration-oauth'
 import { saveIntegrationCredential } from '@/lib/integration-store'
 
 type State = { userId: string; provider: string; createdAt: number }
-
-function getCookie(request: Request, name: string) {
-  return request.headers.get('cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.split('=').slice(1).join('=')
-}
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
   const error = url.searchParams.get('error')
   const state = url.searchParams.get('state')
-  const stateCookieValue = getCookie(request, stateCookie('mercadopago'))
-  const payloadCookieValue = getCookie(request, statePayloadCookie('mercadopago'))
-  const saved = decryptJson<State>(payloadCookieValue)
 
   if (error) return NextResponse.redirect(new URL(`/integraciones?oauth_error=mercadopago&reason=${encodeURIComponent(error)}`, url))
-  if (!code || !state || !stateCookieValue || state !== stateCookieValue || !saved || saved.provider !== 'mercadopago' || saved.createdAt < Date.now() - 10 * 60 * 1000) {
+
+  // The state is an authenticated/encrypted payload created by CASA ALLEGRA itself.
+  // This avoids relying on a browser cookie surviving the round trip through Mercado Pago.
+  const saved = decryptJson<State>(state)
+  if (!code || !state || !saved || saved.provider !== 'mercadopago' || !saved.userId || saved.createdAt < Date.now() - 10 * 60 * 1000) {
     return NextResponse.redirect(new URL('/integraciones?oauth_error=mercadopago&reason=invalid_state', url))
   }
 
@@ -49,7 +46,5 @@ export async function GET(request: Request) {
 
   const redirect = NextResponse.redirect(new URL('/integraciones?oauth=mercadopago', url))
   redirect.cookies.set(tokenCookie('mercadopago'), encryptJson(credential), cookieOptions())
-  redirect.cookies.set(stateCookie('mercadopago'), '', cookieOptions(0))
-  redirect.cookies.set(statePayloadCookie('mercadopago'), '', cookieOptions(0))
   return redirect
 }
