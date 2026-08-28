@@ -1,23 +1,18 @@
 import { NextResponse } from 'next/server'
-import { decryptJson, encryptJson, getRedirectUri, cookieOptions, stateCookie, tokenCookie } from '@/lib/integration-oauth'
+import { decryptJson, encryptJson, getRedirectUri, cookieOptions, tokenCookie } from '@/lib/integration-oauth'
 import { saveIntegrationCredential } from '@/lib/integration-store'
 
 type State = { userId: string; provider: string; createdAt: number }
-
-function getCookie(request: Request, name: string) {
-  return request.headers.get('cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.split('=').slice(1).join('=')
-}
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const code = url.searchParams.get('code')
   const error = url.searchParams.get('error')
   const state = url.searchParams.get('state')
-  const stateCookieValue = getCookie(request, stateCookie('mercadolibre'))
-  const saved = decryptJson<State>(stateCookieValue)
+  const saved = decryptJson<State>(state)
 
   if (error) return NextResponse.redirect(new URL(`/integraciones?oauth_error=mercadolibre&reason=${encodeURIComponent(error)}`, url))
-  if (!code || !state || state !== stateCookieValue || !saved || saved.provider !== 'mercadolibre' || saved.createdAt < Date.now() - 10 * 60 * 1000) {
+  if (!code || !state || !saved || saved.provider !== 'mercadolibre' || !saved.userId || saved.createdAt < Date.now() - 10 * 60 * 1000) {
     return NextResponse.redirect(new URL('/integraciones?oauth_error=mercadolibre&reason=invalid_state', url))
   }
 
@@ -35,6 +30,5 @@ export async function GET(request: Request) {
 
   const redirect = NextResponse.redirect(new URL('/integraciones?oauth=mercadolibre', url))
   redirect.cookies.set(tokenCookie('mercadolibre'), encryptJson(credential), cookieOptions())
-  redirect.cookies.set(stateCookie('mercadolibre'), '', cookieOptions(0))
   return redirect
 }
