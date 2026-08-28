@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { decryptJson, encryptJson, getRedirectUri, cookieOptions, stateCookie, tokenCookie } from '@/lib/integration-oauth'
+import { decryptJson, encryptJson, getRedirectUri, cookieOptions, stateCookie, statePayloadCookie, tokenCookie } from '@/lib/integration-oauth'
 import { saveIntegrationCredential } from '@/lib/integration-store'
 
 type State = { userId: string; provider: string; createdAt: number }
@@ -14,10 +14,11 @@ export async function GET(request: Request) {
   const error = url.searchParams.get('error')
   const state = url.searchParams.get('state')
   const stateCookieValue = getCookie(request, stateCookie('mercadopago'))
-  const saved = decryptJson<State>(stateCookieValue)
+  const payloadCookieValue = getCookie(request, statePayloadCookie('mercadopago'))
+  const saved = decryptJson<State>(payloadCookieValue)
 
   if (error) return NextResponse.redirect(new URL(`/integraciones?oauth_error=mercadopago&reason=${encodeURIComponent(error)}`, url))
-  if (!code || !state || state !== stateCookieValue || !saved || saved.provider !== 'mercadopago' || saved.createdAt < Date.now() - 10 * 60 * 1000) {
+  if (!code || !state || !stateCookieValue || state !== stateCookieValue || !saved || saved.provider !== 'mercadopago' || saved.createdAt < Date.now() - 10 * 60 * 1000) {
     return NextResponse.redirect(new URL('/integraciones?oauth_error=mercadopago&reason=invalid_state', url))
   }
 
@@ -49,5 +50,6 @@ export async function GET(request: Request) {
   const redirect = NextResponse.redirect(new URL('/integraciones?oauth=mercadopago', url))
   redirect.cookies.set(tokenCookie('mercadopago'), encryptJson(credential), cookieOptions())
   redirect.cookies.set(stateCookie('mercadopago'), '', cookieOptions(0))
+  redirect.cookies.set(statePayloadCookie('mercadopago'), '', cookieOptions(0))
   return redirect
 }
