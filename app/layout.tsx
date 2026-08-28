@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'CASA ALLEGRA APP',
+  title: 'CASAALLEGRA APP',
   description: 'Gestión de negocios simple, ordenada y profesional.',
   manifest: '/manifest.webmanifest',
 }
@@ -24,6 +24,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   localStorage.setItem(resetKey, 'done');
                 }
               } catch (_) {}
+              const fixBrandAssets = () => {
+                document.querySelectorAll('img[src="/icon-512.png"],img[src="/logo-casa-allegra.png"]').forEach((img) => {
+                  img.setAttribute('src', 'https://raw.githubusercontent.com/casaallegra00-glitch/CASA-ALLEGRA/main/icon-512.png');
+                });
+              };
+              if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fixBrandAssets);
+              else fixBrandAssets();
+              new MutationObserver(fixBrandAssets).observe(document.documentElement, { childList: true, subtree: true });
             })();`,
           }}
         />
