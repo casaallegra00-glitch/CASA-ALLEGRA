@@ -8,18 +8,6 @@ export function middleware(request: NextRequest) {
     httpsUrl.protocol = 'https:'
     return NextResponse.redirect(httpsUrl, 308)
   }
-
-  const pathname = request.nextUrl.pathname
-  if (pathname.startsWith('/integraciones')) {
-    const hasSupabaseSession = request.cookies.getAll().some(({ name }) => name.includes('auth-token'))
-    if (!hasSupabaseSession) {
-      const loginUrl = request.nextUrl.clone()
-      loginUrl.pathname = '/'
-      loginUrl.searchParams.set('login', '1')
-      return NextResponse.redirect(loginUrl)
-    }
-  }
-
   return NextResponse.next()
 }
 
