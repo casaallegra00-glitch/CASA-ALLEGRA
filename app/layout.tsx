@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'CASA ALLEGRA · E-commerce',
-  description: 'Tienda online y gestión comercial profesional.',
+  title: 'CASA ALLEGRA APP',
+  description: 'Gestión de negocios simple, ordenada y profesional.',
   manifest: '/manifest.webmanifest',
 }
 
