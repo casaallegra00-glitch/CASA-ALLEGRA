@@ -41,6 +41,13 @@ export async function getIntegrationCredential(userId: string, provider: StoredC
   return encrypted ? decryptJson<StoredCredential>(encrypted) : null
 }
 
+export async function deleteIntegrationCredential(userId: string, provider: StoredCredential['provider']) {
+  const client = admin()
+  if (!client) return false
+  const { error } = await client.from('integration_connections').delete().eq('user_id', userId).eq('provider', provider)
+  return !error
+}
+
 export async function getUserFromBearer(request: Request) {
   const auth = request.headers.get('authorization') || ''
   const accessToken = auth.startsWith('Bearer ') ? auth.slice(7) : ''
