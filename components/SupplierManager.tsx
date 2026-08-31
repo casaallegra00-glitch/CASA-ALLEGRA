@@ -1,7 +1,7 @@
 'use client'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 
-type Product={id:number;name:string;price:number;cost:number;stock:number;sku:string;supplier?:string;active?:boolean}
+type Product={id:number;name:string;category:string;price:number;stock:number;sku:string;barcode?:string;description?:string;cost:number;minStock:number;unit:string;supplier?:string;active:boolean;catalog:boolean;image?:string;brand?:string}
 type Client={id:number;name:string;contact:string}
 type Supplier={id:number;name:string;contact:string;phone:string;email:string;address:string;cuit:string;website:string;notes:string;productIds:number[]}
 type Purchase={id:number;supplierId:number;supplierName:string;date:string;payment:string;reference:string;discount:number;total:number;items:{productId:number;name:string;quantity:number;unitPrice:number;total:number}[]}
