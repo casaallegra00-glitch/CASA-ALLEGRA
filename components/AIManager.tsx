@@ -20,7 +20,7 @@ export default function AIManager({question,onQuestionChange,onNotice,context}:P
   const clean=q.trim()
   if(!clean){onNotice('Escribí una consulta para ANGI.');return}
   setLoading(true)
-  setMessages(m=>[...m,{role:'user',text:clean}])
+  setMessages(m=>[...m,{role:'user',text:clean},{role:'angi',text:''}])
   onQuestionChange('')
   try{
    const res=await fetch('/api/angi',{
@@ -28,12 +28,31 @@ export default function AIManager({question,onQuestionChange,onNotice,context}:P
     headers:{'Content-Type':'application/json'},
     body:JSON.stringify({question:clean,context})
    })
-   const data=await res.json()
-   if(!res.ok) throw new Error(data?.error||'No pudimos conectar con ANGI.')
-   setMessages(m=>[...m,{role:'angi',text:data.answer||'ANGI no recibió una respuesta.'}])
+   if(!res.ok){
+    const data=await res.json().catch(()=>({}))
+    throw new Error(data?.error||'No pudimos conectar con ANGI.')
+   }
+   if(!res.body) throw new Error('ANGI no devolvió una respuesta.')
+   const reader=res.body.getReader()
+   const decoder=new TextDecoder()
+   let full=''
+   while(true){
+    const {value,done}=await reader.read()
+    if(done)break
+    full+=decoder.decode(value,{stream:true})
+    const answerText=full
+    setMessages(m=>{
+     const next=[...m]
+     const last=next.length-1
+     if(last>=0&&next[last].role==='angi') next[last]={role:'angi',text:answerText}
+     return next
+    })
+   }
+   full+=decoder.decode()
+   if(!full.trim()) throw new Error('ANGI no recibió una respuesta de la IA.')
   }catch(err){
    const message=err instanceof Error?err.message:'No pudimos conectar con ANGI.'
-   setMessages(m=>[...m,{role:'angi',text:message}])
+   setMessages(m=>{const next=[...m];const last=next.length-1;if(last>=0&&next[last].role==='angi'&&next[last].text==='')next[last]={role:'angi',text:message};else next.push({role:'angi',text:message});return next})
    onNotice('ANGI no pudo responder esta vez.')
   }finally{
    setLoading(false)
@@ -58,7 +77,7 @@ export default function AIManager({question,onQuestionChange,onNotice,context}:P
    </div>
   </div>
   <div className="panel" style={{minHeight:220,marginBottom:16}}>
-   {messages.length?messages.map((m,i)=><div key={i} className="trow"><span><b>{m.role==='angi'?'ANGI':'Vos'}</b><small>{m.text}</small></span></div>):<div className="empty-state">Hola, soy ANGI 👋. Elegí una pregunta rápida o escribime lo que necesitás.</div>}
+   {messages.length?messages.map((m,i)=><div key={i} className="trow"><span><b>{m.role==='angi'?'ANGI':'Vos'}</b><small>{m.text||(m.role==='angi'&&loading?'Escribiendo…':'')}</small></span></div>):<div className="empty-state">Hola, soy ANGI 👋. Elegí una pregunta rápida o escribime lo que necesitás.</div>}
   </div>
   <form onSubmit={answer} className="form-panel">
    <label>Escribile a ANGI</label>
