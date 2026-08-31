@@ -9,11 +9,15 @@ if (!source.includes(importLine)) {
   source = source.replace("import { createClient } from '@supabase/supabase-js'", "import { createClient } from '@supabase/supabase-js'\n" + importLine)
 }
 
-// Unificamos el tipo Client del módulo principal con ClientManagerV2.
-// El contacto puede faltar en clientes nuevos y se agregan los campos completos.
-const oldClientType = "type Client = { id:number; name:string; contact:string }"
-const newClientType = "type Client = { id:number; name:string; dni?:string; cuil?:string; contact?:string; phone?:string; email?:string; address?:string; notes?:string }"
-if (source.includes(oldClientType)) source = source.replace(oldClientType, newClientType)
+// El tipo principal debe coincidir con ClientManagerV2: contact es obligatorio.
+const oldClientTypes = [
+  "type Client = { id:number; name:string; contact:string }",
+  "type Client = { id:number; name:string; dni?:string; cuil?:string; contact?:string; phone?:string; email?:string; address?:string; notes?:string }"
+]
+const newClientType = "type Client = { id:number; name:string; contact:string; phone?:string; email?:string; address?:string; notes?:string; dni?:string; cuil?:string }"
+for (const oldType of oldClientTypes) {
+  if (source.includes(oldType)) source = source.replace(oldType, newClientType)
+}
 
 const clientsMarker = "{section==='clientes'&&"
 const ordersMarker = "{section==='pedidos'&&"
@@ -36,4 +40,4 @@ if (!source.includes('<ClientManagerV2 clients={clients}')) {
 }
 
 fs.writeFileSync(file, source)
-console.log('Clientes conectado correctamente al módulo principal y tipos unificados.')
+console.log('Clientes conectado correctamente al módulo principal con tipo Client compatible.')
