@@ -9,15 +9,10 @@ if (!source.includes(importLine)) {
   source = source.replace("import { createClient } from '@supabase/supabase-js'", "import { createClient } from '@supabase/supabase-js'\n" + importLine)
 }
 
-// El tipo principal debe coincidir con ClientManagerV2: contact es obligatorio.
-const oldClientTypes = [
-  "type Client = { id:number; name:string; contact:string }",
-  "type Client = { id:number; name:string; dni?:string; cuil?:string; contact?:string; phone?:string; email?:string; address?:string; notes?:string }"
-]
-const newClientType = "type Client = { id:number; name:string; contact:string; phone?:string; email?:string; address?:string; notes?:string; dni?:string; cuil?:string }"
-for (const oldType of oldClientTypes) {
-  if (source.includes(oldType)) source = source.replace(oldType, newClientType)
-}
+// Mantener una sola estructura de Cliente y evitar conflictos entre módulos.
+const clientType = /type Client = \{[^\n]*\}/
+const unifiedClientType = "type Client = { id:number; name:string; contact:string; phone?:string; email?:string; address?:string; notes?:string; dni?:string; cuil?:string }"
+if (clientType.test(source)) source = source.replace(clientType, unifiedClientType)
 
 const clientsMarker = "{section==='clientes'&&"
 const ordersMarker = "{section==='pedidos'&&"
@@ -35,9 +30,19 @@ if (start === -1) {
   source = source.slice(0, start) + componentBlock + source.slice(end)
 }
 
+// Agregar el acceso a creación de categorías en Productos sin reconstruir el módulo.
+const productsToolbar = "{categories.map(c=><button key={c} className={`filter ${category===c?'active-filter':''}`} onClick={()=>setCategory(c)}>{c}</button>)}"
+const productsToolbarWithCreate = productsToolbar + "<button type=\"button\" className=\"secondary-btn\" onClick={createCategory}>＋ Nueva categoría</button>"
+if (!source.includes('onClick={createCategory}') && source.includes(productsToolbar)) {
+  source = source.replace(productsToolbar, productsToolbarWithCreate)
+}
+
 if (!source.includes('<ClientManagerV2 clients={clients}')) {
   throw new Error('No se pudo conectar ClientManagerV2 al apartado Clientes; no se aplicó ningún cambio.')
 }
+if (!source.includes('onClick={createCategory}')) {
+  throw new Error('No se pudo agregar el botón Nueva categoría en Productos; no se aplicó ningún cambio.')
+}
 
 fs.writeFileSync(file, source)
-console.log('Clientes conectado correctamente al módulo principal con tipo Client compatible.')
+console.log('CASA ALLEGRA: Clientes integrado y creación de categorías habilitada en Productos.')
