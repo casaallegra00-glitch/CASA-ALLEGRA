@@ -9,8 +9,12 @@ if (!source.includes(importLine)) {
   source = source.replace("import { createClient } from '@supabase/supabase-js'", "import { createClient } from '@supabase/supabase-js'\n" + importLine)
 }
 
-// Reemplazamos únicamente el bloque de Clientes entre sus marcadores de sección.
-// Esto evita depender de contar etiquetas </section> y no toca Productos, Ventas, Caja ni Pedidos.
+// Unificamos el tipo Client del módulo principal con ClientManagerV2.
+// El contacto puede faltar en clientes nuevos y se agregan los campos completos.
+const oldClientType = "type Client = { id:number; name:string; contact:string }"
+const newClientType = "type Client = { id:number; name:string; dni?:string; cuil?:string; contact?:string; phone?:string; email?:string; address?:string; notes?:string }"
+if (source.includes(oldClientType)) source = source.replace(oldClientType, newClientType)
+
 const clientsMarker = "{section==='clientes'&&"
 const ordersMarker = "{section==='pedidos'&&"
 const start = source.indexOf(clientsMarker)
@@ -32,4 +36,4 @@ if (!source.includes('<ClientManagerV2 clients={clients}')) {
 }
 
 fs.writeFileSync(file, source)
-console.log('Clientes conectado correctamente al módulo principal.')
+console.log('Clientes conectado correctamente al módulo principal y tipos unificados.')
