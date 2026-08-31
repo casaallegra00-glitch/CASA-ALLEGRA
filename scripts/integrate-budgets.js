@@ -30,12 +30,8 @@ if (!source.includes("<BudgetManager products={products}")) {
   source = source.slice(0, start) + budgetBlock + source.slice(start)
 }
 
-// BudgetManager ya contiene la implementación correcta para incrustar el logo
-// como data URL en PNG, SVG y PDF. No modificar ese componente durante el build.
-if (!budgetSource.includes('const logoToDataUrl=')) {
-  console.warn('CASA ALLEGRA: BudgetManager no tiene la implementación esperada de logo.')
-}
+require('./integrate-help.js')
 
 fs.writeFileSync(file, source)
 fs.writeFileSync(budgetFile, budgetSource)
-console.log('CASA ALLEGRA: Presupuestos integrado sin reescribir la exportación del logo.')
+console.log('CASA ALLEGRA: Presupuestos y Ayuda preparados en el build.')
