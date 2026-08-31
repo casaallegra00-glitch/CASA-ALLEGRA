@@ -30,7 +30,10 @@ export default function NotificationsManager({products,orders,storageKey='casa-a
    const done=['Entregado','Cancelado'].includes(o.status)
    if(!done && o.status==='Pendiente') items.push({id:`pending-order-${o.id}`,type:'info',title:'Pedido pendiente',message:`${o.number||`PED-${o.id}`} · ${o.client} todavía está pendiente.`,action:'pedidos'})
    const due=o.deliveryDate
-   if(!done&&due){const d=new Date(`${due}T00:00:00`);if(d<today)items.push({id:`overdue-order-${o.id}-${due}`,type:'critical',title:'Entrega vencida',message:`${o.number||`PED-${o.id}`} · ${o.client} tenía entrega para ${d.toLocaleDateString('es-AR')}.`,action:'pedidos')}}
+   if(!done&&due){
+    const d=new Date(`${due}T00:00:00`)
+    if(d<today) items.push({id:`overdue-order-${o.id}-${due}`,type:'critical',title:'Entrega vencida',message:`${o.number||`PED-${o.id}`} · ${o.client} tenía entrega para ${d.toLocaleDateString('es-AR')}.`,action:'pedidos'})
+   }
   }
   return items
  },[products,orders])
