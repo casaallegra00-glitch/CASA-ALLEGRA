@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 type SectionId = 'inicio'|'productos'|'clientes'|'ventas'|'pedidos'|'presupuestos'|'caja'|'reportes'|'ia'|'notificaciones'|'integraciones'|'configuracion'
 
@@ -24,7 +24,7 @@ const guides:Guide[]=[
 export default function HelpManager({onGo,businessName='CASA ALLEGRA APP',storageKey,completedExternal={}}:Props){
  const [query,setQuery]=useState('')
  const [open,setOpen]=useState('')
- const [done,setDone]=useState<Record<string,boolean>>({...completedExternal})
+ const [done,setDone]=useState<Record<string,boolean>>(()=>Object.fromEntries(Object.entries(completedExternal).map(([key,value])=>[key,value === true])))
  const firstSteps=[
   {id:'business',title:'Configurá tu negocio',desc:'Revisá el nombre y la configuración principal.',section:'configuracion' as SectionId},
   {id:'product',title:'Agregá tu primer producto',desc:'Cargá un producto con precio y stock.',section:'productos' as SectionId},
@@ -34,7 +34,6 @@ export default function HelpManager({onGo,businessName='CASA ALLEGRA APP',storag
   {id:'cash',title:'Registrá un movimiento de caja',desc:'Cargá un ingreso o egreso para comenzar a controlar el saldo.',section:'caja' as SectionId},
   {id:'angi',title:'Conocé a ANGI',desc:'Probá una pregunta rápida al asistente.',section:'ia' as SectionId},
  ]
- useEffect(()=>{try{const raw=localStorage.getItem(`${storageKey}-help-progress`);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==='object')setDone({...completedExternal,...parsed})}}catch{}},[storageKey,completedExternal])
  const filtered=useMemo(()=>{const q=query.trim().toLowerCase();return q?guides.filter(g=>`${g.title} ${g.text} ${g.steps.join(' ')}`.toLowerCase().includes(q)):guides},[query])
  const completedCount=firstSteps.filter(s=>done[s.id]).length
  const markDone=(id:string)=>{const next={...done,[id]:true};setDone(next);try{localStorage.setItem(`${storageKey}-help-progress`,JSON.stringify(next))}catch{}}
@@ -44,7 +43,7 @@ export default function HelpManager({onGo,businessName='CASA ALLEGRA APP',storag
    <div className='panel' style={{marginBottom:18}}>
     <div className='panel-heading'><div><h3>🚀 Primeros pasos</h3><small>Te guiamos desde cero para dejar la app lista.</small></div><strong>{completedCount}/{firstSteps.length}</strong></div>
     <div style={{height:10,background:'#eeeaf7',borderRadius:999,overflow:'hidden',margin:'10px 0 16px'}}><div style={{height:'100%',width:`${(completedCount/firstSteps.length)*100}%`,background:'linear-gradient(90deg,#a98bd8,#79c9c5)',transition:'width .2s'}}/></div>
-    <div className='report-grid'>{firstSteps.map(step=><article key={step.id} className='report-card' style={{opacity:done[step.id] ? .72:1}}><div><strong>{done[step.id]?'✅ ':''}{step.title}</strong><small>{step.desc}</small></div><div className='toolbar' style={{marginTop:10}}><button type='button' className='primary-btn' onClick={()=>onGo(step.section)}>Ir ahora</button><button type='button' className='secondary-btn' onClick={()=>markDone(step.id)}>{done[step.id]?'Completado':'Marcar listo'}</button></div></article>)}</div>
+    <div className='report-grid'>{firstSteps.map(step=><article key={step.id} className='report-card' style={{opacity:done[step.id] ? .72:1}}><div style={{display:'flex',justifyContent:'space-between',gap:10}}><div><strong>{done[step.id]?'✅ ':''}{step.title}</strong><small>{step.desc}</small></div></div><div className='toolbar' style={{marginTop:10}}><button type='button' className='primary-btn' onClick={()=>onGo(step.section)}>Ir ahora</button><button type='button' className='secondary-btn' onClick={()=>markDone(step.id)}>{done[step.id]?'Completado':'Marcar listo'}</button></div></article>)}</div>
     <button type='button' className='secondary-btn' onClick={reset} style={{marginTop:12}}>Reiniciar progreso</button>
    </div>
    <div className='panel' style={{marginBottom:18}}><label>🔎 Buscar en Ayuda</label><input value={query} onChange={e=>setQuery(e.target.value)} placeholder='Ej.: ¿cómo creo un presupuesto?' /></div>
