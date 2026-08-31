@@ -40,10 +40,13 @@ if (budgetSource.includes(svgStart) && !budgetSource.includes(logoMarker)) {
     `${svgStart}\n  const logoSrc=logo.startsWith('data:')?logo:(typeof window!=='undefined'?new URL(logo,window.location.origin).href:logo)`
   )
 }
-const svgNeedle = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1000\" height=\"1414\" viewBox=\"0 0 1000 1414\"><rect width=\"1000\" height=\"1414\" fill=\"#fff\"/><rect x=\"40\" y=\"40\" width=\"920\" height=\"1334\" rx=\"24\" fill=\"#fff\" stroke=\"#d8cfff\" stroke-width=\"4\"/><text x=\"70\" y=\"105\""
-const svgWithLogo = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1000\" height=\"1414\" viewBox=\"0 0 1000 1414\"><rect width=\"1000\" height=\"1414\" fill=\"#fff\"/><rect x=\"40\" y=\"40\" width=\"920\" height=\"1334\" rx=\"24\" fill=\"#fff\" stroke=\"#d8cfff\" stroke-width=\"4\"/><image href=\"${esc(logoSrc)}\" x=\"70\" y=\"58\" width=\"120\" height=\"90\" preserveAspectRatio=\"xMidYMid meet\"/><text x=\"210\" y=\"105\""
-if (budgetSource.includes(svgNeedle) && budgetSource.includes(logoMarker) && !budgetSource.includes('preserveAspectRatio="xMidYMid meet"')) {
-  budgetSource = budgetSource.replace(svgNeedle, svgWithLogo)
+const svgAnchor = "<rect x=\\\"40\\\" y=\\\"40\\\" width=\\\"920\\\" height=\\\"1334\\\" rx=\\\"24\\\" fill=\\\"#fff\\\" stroke=\\\"#d8cfff\\\" stroke-width=\\\"4\\\"/>"
+if (budgetSource.includes(logoMarker) && !budgetSource.includes('preserveAspectRatio=\\\"xMidYMid meet\\\"')) {
+  const idx = budgetSource.indexOf(svgAnchor)
+  if (idx !== -1) {
+    const insertAt = idx + svgAnchor.length
+    budgetSource = budgetSource.slice(0, insertAt) + "<image href=\\\"${esc(logoSrc)}\\\" x=\\\"70\\\" y=\\\"58\\\" width=\\\"120\\\" height=\\\"90\\\" preserveAspectRatio=\\\"xMidYMid meet\\\"/>" + budgetSource.slice(insertAt)
+  }
 }
 
 fs.writeFileSync(file, source)
