@@ -29,27 +29,77 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model,
+        stream: true,
         messages: [
           { role: 'system', content: instructions },
           { role: 'user', content: question },
         ],
-        temperature: 0.3,
-        max_tokens: 700,
+        temperature: 0.2,
+        max_tokens: 450,
       }),
     })
 
-    const data = await response.json()
-    if (!response.ok) {
+    if (!response.ok || !response.body) {
+      const data = await response.json().catch(() => ({}))
       const message = data?.error?.message || data?.message || 'No pudimos obtener una respuesta de ANGI.'
-      return NextResponse.json({ error: message }, { status: response.status })
+      return NextResponse.json({ error: message }, { status: response.status || 502 })
     }
 
-    const output = data?.choices?.[0]?.message?.content?.trim() || ''
-    if (!output) {
-      return NextResponse.json({ error: 'ANGI no recibió una respuesta de la IA.' }, { status: 502 })
-    }
+    const encoder = new TextEncoder()
+    const upstream = response.body
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = upstream.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        try {
+          while (true) {
+            const { value, done } = await reader.read()
+            if (done) break
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split('\n')
+            buffer = lines.pop() || ''
+            for (const raw of lines) {
+              const line = raw.trim()
+              if (!line.startsWith('data:')) continue
+              const payload = line.slice(5).trim()
+              if (payload === '[DONE]') continue
+              try {
+                const parsed = JSON.parse(payload)
+                const token = parsed?.choices?.[0]?.delta?.content
+                if (typeof token === 'string' && token) {
+                  controller.enqueue(encoder.encode(token))
+                }
+              } catch {}
+            }
+          }
+          if (buffer.startsWith('data:')) {
+            const payload = buffer.slice(5).trim()
+            if (payload && payload !== '[DONE]') {
+              try {
+                const parsed = JSON.parse(payload)
+                const token = parsed?.choices?.[0]?.delta?.content
+                if (typeof token === 'string' && token) controller.enqueue(encoder.encode(token))
+              } catch {}
+            }
+          }
+          controller.close()
+        } catch {
+          controller.error(new Error('ANGI perdió la conexión con el proveedor de IA.'))
+        } finally {
+          reader.releaseLock()
+        }
+      },
+    })
 
-    return NextResponse.json({ answer: output })
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      },
+    })
   } catch {
     return NextResponse.json({ error: 'No pudimos conectar con ANGI. Intentá nuevamente.' }, { status: 500 })
   }
