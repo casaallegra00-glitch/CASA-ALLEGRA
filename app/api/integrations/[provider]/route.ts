@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server'
 
 export const dynamic='force-dynamic'
 
-export async function GET(_req:Request,{params}:{params:{provider:string}}){
- const provider=params.provider
+type Params={params:Promise<{provider:string}>}
+
+export async function GET(_req:Request,{params}:Params){
+ const {provider}=await params
  const config={
   mercadopago:{keys:['MP_CLIENT_ID','MP_CLIENT_SECRET','MP_REDIRECT_URI'],label:'Mercado Pago'},
   mercadolibre:{keys:['ML_CLIENT_ID','ML_CLIENT_SECRET','ML_REDIRECT_URI'],label:'Mercado Libre'},
