@@ -8,10 +8,17 @@ if (!source.includes(importLine)) {
   source = source.replace("import { createClient } from '@supabase/supabase-js'", "import { createClient } from '@supabase/supabase-js'\n" + importLine)
 }
 
-// El módulo de Pedidos usa campos adicionales, pero todos son opcionales salvo los datos básicos.
+// El módulo de Pedidos y la pantalla principal deben compartir exactamente el mismo contrato.
+// number es obligatorio en los pedidos nuevos; los demás datos enriquecidos son opcionales para
+// mantener compatibilidad con pedidos antiguos guardados en localStorage.
 const oldOrderType = "type Order = { id:number; client:string; detail:string; status:string; amount:number; date:string }"
-const newOrderType = "type Order = { id:number; client:string; detail:string; status:string; amount:number; date:string; number?:string; clientId?:number; items?:Array<{productId:number;name:string;quantity:number;unitPrice:number;total:number}>; discount?:number; payment?:string; deliveryDate?:string; notes?:string }"
-if (source.includes(oldOrderType)) source = source.replace(oldOrderType, newOrderType)
+const legacyEnrichedType = "type Order = { id:number; client:string; detail:string; status:string; amount:number; date:string; number?:string; clientId?:number; items?:Array<{productId:number;name:string;quantity:number;unitPrice:number;total:number}>; discount?:number; payment?:string; deliveryDate?:string; notes?:string }"
+const unifiedOrderType = "type Order = { id:number; number:string; client:string; detail:string; status:string; amount:number; date:string; clientId?:number; items?:Array<{productId:number;name:string;quantity:number;unitPrice:number;total:number}>; discount?:number; payment?:string; deliveryDate?:string; notes?:string }"
+if (source.includes(oldOrderType)) {
+  source = source.replace(oldOrderType, unifiedOrderType)
+} else if (source.includes(legacyEnrichedType)) {
+  source = source.replace(legacyEnrichedType, unifiedOrderType)
+}
 
 const marker = "{section==='pedidos'&&"
 const nextMarker = "{section==='caja'&&"
@@ -24,4 +31,4 @@ source = source.slice(0, start) + componentBlock + source.slice(end)
 
 if (!source.includes('<OrderManager clients={clients}')) throw new Error('No se pudo conectar OrderManager.')
 fs.writeFileSync(file, source)
-console.log('CASA ALLEGRA: módulo completo de Pedidos conectado correctamente.')
+console.log('CASA ALLEGRA: módulo completo de Pedidos conectado con un único tipo Order compartido.')
