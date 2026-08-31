@@ -4,7 +4,7 @@ import { FormEvent, useMemo, useState } from 'react'
 type Client = { id:number; name:string; contact:string; phone?:string; email?:string; address?:string; notes?:string; dni?:string; cuil?:string }
 type Product = { id:number; name:string; price:number; stock:number; sku:string; active?:boolean }
 type OrderItem = { productId:number; name:string; quantity:number; unitPrice:number; total:number }
-type Order = { id:number; number?:string; clientId?:number; client:string; items?:OrderItem[]; detail:string; status:string; amount:number; discount:number; payment:string; date:string; deliveryDate?:string; notes?:string }
+type Order = { id:number; number?:string; clientId?:number; client:string; items?:OrderItem[]; detail:string; status:string; amount:number; discount?:number; payment:string; date:string; deliveryDate?:string; notes?:string }
 type Props = { clients:Client[]; products:Product[]; orders:Order[]; onClientsChange:(clients:Client[])=>void; onOrdersChange:(orders:Order[])=>void; onNotice:(message:string)=>void }
 const money=(v:number)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(v)
 const statuses=['Pendiente','En producción','Listo','Entregado','Cancelado']
