@@ -8,7 +8,7 @@ if(!source.includes(importLine)){
   source=source.replace("import { createClient } from '@supabase/supabase-js'", "import { createClient } from '@supabase/supabase-js'\n"+importLine)
 }
 
-// Ensure the Section union contains both modules, regardless of the exact current ordering.
+// Ensure Section includes the modules used by this helper.
 const sectionMatch=source.match(/type Section = 'inicio'[^\n]*/)
 if(sectionMatch){
   let sectionLine=sectionMatch[0]
@@ -17,18 +17,18 @@ if(sectionMatch){
   source=source.replace(sectionMatch[0],sectionLine)
 }
 
-// Ensure AYUDA is present in the sidebar navigation.
+// Ensure AYUDA is present in the sidebar navigation without disturbing the existing closing brackets.
 const navEntry="['ayuda','Ayuda','help']"
 if(!source.includes(navEntry)){
-  const navMatch=source.match(/const nav:Array<[^\n]+\n?/)
+  const navMatch=source.match(/const nav:Array<[^\n]+/)
   if(navMatch){
     const line=navMatch[0]
-    const pos=line.lastIndexOf(']]')
-    if(pos!==-1) source=source.slice(0,source.indexOf(line)+pos)+",[\'ayuda\',\'Ayuda\',\'help\']"+source.slice(source.indexOf(line)+pos)
+    const updated=line.replace(/\]\];?$/,",['ayuda','Ayuda','help']]" )
+    if(updated!==line) source=source.replace(line,updated)
   }
 }
 
-// Replace the old placeholder with the real HelpManager, or insert it before closing of the main content.
+// Replace the old placeholder with the real HelpManager, or insert it near the existing content region.
 const helpBlock="{section==='ayuda'&&<HelpManager onGo={goTo} businessName={businessName||'CASA ALLEGRA APP'} storageKey={base}/> }"
 const oldHelp=/\{section==='ayuda'&&<section className=\"panel large-section\"><h2>Ayuda<\/h2><p>Administrá productos, ventas, clientes, pedidos, caja y reportes\.<\/p><\/section>\}/
 if(oldHelp.test(source)){
