@@ -20,7 +20,12 @@ export async function GET(req:Request){
   url.searchParams.set('code_challenge_method','S256')
   return NextResponse.redirect(url)
  }catch(err){
-  const back=new URL(req.url);back.pathname='/';back.searchParams.set('integration','mercadopago');back.searchParams.set('error',err instanceof Error?err.message:'No se pudo iniciar Mercado Pago.')
+  const back=new URL(req.url)
+  back.pathname='/'
+  back.search=''
+  back.searchParams.set('section','integraciones')
+  back.searchParams.set('integration','mercadopago')
+  back.searchParams.set('error',err instanceof Error?err.message:'No se pudo iniciar Mercado Pago.')
   return NextResponse.redirect(back)
  }
 }
