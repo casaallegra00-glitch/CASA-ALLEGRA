@@ -15,7 +15,7 @@ const homeNextMarker = "{section==='productos'&&"
 const homeStart = source.indexOf(homeMarker)
 const homeEnd = source.indexOf(homeNextMarker, homeStart + homeMarker.length)
 if (homeStart === -1 || homeEnd === -1) throw new Error('No se encontró el bloque de Inicio.')
-const homeReplacement = "{section==='inicio'&&<><HomeDashboard products={products} sales={sales} orders={orders} cash={cash} onNavigate={(s)=>setSection(s as Section)}/></>}\n"
+const homeReplacement = "{section==='inicio'&&<><HomeDashboard products={products} sales={sales} orders={orders} cash={cash} onNavigate={(s)=>goTo(s as Section)}/></>}\n"
 source = source.slice(0, homeStart) + homeReplacement + source.slice(homeEnd)
 const marker = "{section==='reportes'&&"
 const nextMarker = "{section==='integraciones'&&"
@@ -25,4 +25,4 @@ if (start === -1 || end === -1) throw new Error('No se encontró el bloque de Re
 const replacement = "{section==='reportes'&&<ReportsManager sales={sales} cash={cash} products={products} clients={clients} orders={orders}/> }\n"
 source = source.slice(0, start) + replacement + source.slice(end)
 fs.writeFileSync(file, source)
-console.log('CASA ALLEGRA: Inicio y módulo de Reportes integrados.')
+console.log('CASA ALLEGRA: Inicio y módulo de Reportes integrados con navegación protegida.')
