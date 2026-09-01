@@ -9,15 +9,15 @@ type MLOrder = { id:string; date:string; buyer:string; product:string; quantity:
 
 const money=(v:number)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(v)
 
-export default function IntegrationManager({onNotice}:Props){
+export default function IntegrationManager({storageKey,onNotice}:Props){
  const [active,setActive]=useState<IntegrationKey>('mercadopago')
  const [connected,setConnected]=useState<Record<IntegrationKey,boolean>>({mercadopago:false,mercadolibre:false,mercadoenvios:false,andreani:false,correoargentino:false})
+ const [configured,setConfigured]=useState<Record<IntegrationKey,boolean>>({mercadopago:false,mercadolibre:false,mercadoenvios:false,andreani:false,correoargentino:false})
  const [period,setPeriod]=useState('30')
  const [movements,setMovements]=useState<Movement[]>([])
  const [orders,setOrders]=useState<MLOrder[]>([])
  const [loading,setLoading]=useState(false)
  const [showSetup,setShowSetup]=useState(false)
- const [mpConfigured,setMpConfigured]=useState(false)
 
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search)
@@ -34,7 +34,12 @@ export default function IntegrationManager({onNotice}:Props){
  },[])
 
  const refreshConnection=async(key:IntegrationKey)=>{
-  try{const res=await fetch(`/api/integrations/${key}`,{cache:'no-store'});const data=await res.json();setConnected(c=>({...c,[key]:Boolean(data.connected)}));if(key==='mercadopago')setMpConfigured(Boolean(data.configured))}catch{}
+  try{
+   const res=await fetch(`/api/integrations/${key}`,{cache:'no-store'})
+   const data=await res.json()
+   setConnected(c=>({...c,[key]:Boolean(data.connected)}))
+   setConfigured(c=>({...c,[key]:Boolean(data.configured)}))
+  }catch{}
  }
 
  const periodStart=useMemo(()=>{const d=new Date();d.setDate(d.getDate()-Number(period));return d.getTime()},[period])
@@ -43,14 +48,20 @@ export default function IntegrationManager({onNotice}:Props){
  const expenses=filteredMovements.filter(m=>m.type==='egreso').reduce((a,m)=>a+m.amount,0)
  const balance=income-expenses
 
+ const connectMercadoPago=()=>{
+  if(loading)return
+  setLoading(true)
+  window.location.assign('/api/integrations/mercadopago/connect')
+ }
+
  const loadRemote=async(key:IntegrationKey)=>{
-  if(key==='mercadopago'&&!connected.mercadopago){window.location.href=mpConfigured?'/api/integrations/mercadopago/connect':'/';return}
+  if(key==='mercadopago'&&!connected.mercadopago){connectMercadoPago();return}
   setLoading(true)
   try{
    const endpoint=key==='mercadopago'?'/api/integrations/mercadopago/sync':`/api/integrations/${key}`
    const res=await fetch(endpoint,{cache:'no-store'})
    const data=await res.json()
-   if(res.status===401&&key==='mercadopago'){window.location.href='/api/integrations/mercadopago/connect';return}
+   if(res.status===401&&key==='mercadopago'){connectMercadoPago();return}
    if(!res.ok)throw new Error(data?.error||data?.message||'La integración todavía no está configurada.')
    if(data.connected!==undefined)setConnected(c=>({...c,[key]:Boolean(data.connected)}))
    if(Array.isArray(data.movements))setMovements(data.movements)
@@ -64,8 +75,8 @@ export default function IntegrationManager({onNotice}:Props){
  return <section className='panel large-section'>
   <div className='panel-heading'><div><span className='eyebrow'>CONEXIONES</span><h2>Integraciones</h2><small>Conectá tus plataformas de cobro, ventas y envíos desde un solo lugar.</small></div><select value={period} onChange={e=>setPeriod(e.target.value)}><option value='7'>Últimos 7 días</option><option value='30'>Últimos 30 días</option><option value='90'>Últimos 90 días</option><option value='365'>Último año</option></select></div>
   <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:10,marginBottom:18}}>{card('mercadopago','💳 Mercado Pago','Cobros, transferencias, ingresos, egresos y resumen de cuenta.')}{card('mercadolibre','🛒 Mercado Libre','Ventas, pagos, compradores y estado de las órdenes.')}{card('mercadoenvios','📦 Mercado Envíos','Envíos, seguimiento y estados vinculados a Mercado Libre.')}{card('andreani','🚚 Andreani','Gestión y seguimiento de envíos propios.')}{card('correoargentino','📮 Correo Argentino','Gestión y seguimiento de envíos propios.')}</div>
-  <div className='panel' style={{marginBottom:18}}><div className='panel-heading'><div><h3>{title}</h3><small>{connected[active]?'Conexión activa':active==='mercadopago'&&mpConfigured?'Listo para conectar tu cuenta de Mercado Pago.':'Conectá la cuenta para habilitar la sincronización.'}</small></div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{active==='mercadopago'&&!connected.mercadopago&&<button type='button' className='secondary-btn' onClick={loadRemote.bind(null,'mercadopago')} disabled={!mpConfigured}>Conectar Mercado Pago</button>}<button type='button' className='secondary-btn' onClick={()=>setShowSetup(v=>!v)}>{showSetup?'Cerrar configuración':'Configurar'}</button><button type='button' className='primary-btn' onClick={()=>void loadRemote(active)} disabled={loading}>{active==='mercadopago'&&!connected.mercadopago?'Conectar Mercado Pago':loading?'Actualizando…':'Sincronizar'}</button></div></div>
-   {showSetup&&<div className='panel' style={{marginTop:12,background:'#F8FBFC'}}><h4>Configuración segura</h4><p style={{marginTop:0}}>Las claves privadas permanecen en el servidor. Para Mercado Pago, el botón Conectar abre la autorización oficial y luego vuelve a CASA ALLEGRA.</p><div className='trow'><span>Mercado Pago</span><small>MP_CLIENT_ID · MP_CLIENT_SECRET · MP_REDIRECT_URI · MP_TOKEN_ENCRYPTION_KEY</small></div><div className='trow'><span>Mercado Libre</span><small>ML_CLIENT_ID · ML_CLIENT_SECRET · ML_REDIRECT_URI</small></div><div className='trow'><span>Andreani</span><small>Credenciales/API según contrato del servicio</small></div><div className='trow'><span>Correo Argentino</span><small>Credenciales/API según servicio habilitado</small></div></div>}
+  <div className='panel' style={{marginBottom:18}}><div className='panel-heading'><div><h3>{title}</h3><small>{connected[active]?'Conexión activa':active==='mercadopago'&&configured.mercadopago?'Listo para conectar tu cuenta de Mercado Pago.':'Conectá la cuenta para habilitar la sincronización.'}</small></div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}>{active==='mercadopago'&&!connected.mercadopago&&<button type='button' className='primary-btn' onClick={connectMercadoPago} disabled={loading}>Conectar Mercado Pago</button>}{active!=='mercadopago'&&<button type='button' className='secondary-btn' onClick={()=>setShowSetup(v=>!v)}>{showSetup?'Cerrar configuración':'Configurar'}</button>}{active!=='mercadopago'&&<button type='button' className='primary-btn' onClick={()=>void loadRemote(active)} disabled={loading}>{loading?'Actualizando…':'Sincronizar'}</button>}{active==='mercadopago'&&connected.mercadopago&&<button type='button' className='primary-btn' onClick={()=>void loadRemote(active)} disabled={loading}>{loading?'Actualizando…':'Sincronizar Mercado Pago'}</button>}</div></div>
+   {showSetup&&active!=='mercadopago'&&<div className='panel' style={{marginTop:12,background:'#F8FBFC'}}><h4>Configuración segura</h4><p style={{marginTop:0}}>Las claves privadas permanecen en el servidor. Para Mercado Pago, el botón Conectar abre la autorización oficial y luego vuelve a CASA ALLEGRA.</p><div className='trow'><span>Mercado Pago</span><small>MP_CLIENT_ID · MP_CLIENT_SECRET · MP_REDIRECT_URI · MP_TOKEN_ENCRYPTION_KEY</small></div><div className='trow'><span>Mercado Libre</span><small>ML_CLIENT_ID · ML_CLIENT_SECRET · ML_REDIRECT_URI</small></div><div className='trow'><span>Andreani</span><small>Credenciales/API según contrato del servicio</small></div><div className='trow'><span>Correo Argentino</span><small>Credenciales/API según servicio habilitado</small></div></div>}
   </div>
   {active==='mercadopago'&&<><div className='report-grid'><div className='report-card'><small>Ingresos</small><strong>{money(income)}</strong><span>{filteredMovements.filter(m=>m.type==='ingreso').length} movimientos</span></div><div className='report-card'><small>Egresos</small><strong>{money(expenses)}</strong><span>{filteredMovements.filter(m=>m.type==='egreso').length} movimientos</span></div><div className='report-card'><small>Neto</small><strong>{money(balance)}</strong><span>Ingresos − egresos</span></div></div><div className='panel' style={{marginTop:18}}><h3>Movimientos de Mercado Pago</h3>{filteredMovements.length?filteredMovements.map(m=><div className='trow' key={m.id}><span><b>{m.title}</b><small>{new Date(m.date).toLocaleString('es-AR')} · {m.status}{m.client?` · ${m.client}`:''}{m.alias?` · Alias ${m.alias}`:''}{m.cbu?` · CBU ${m.cbu}`:''}{m.cvu?` · CVU ${m.cvu}`:''}{m.dni?` · DNI ${m.dni}`:''}{m.cuil?` · CUIL ${m.cuil}`:''}{m.detail?` · ${m.detail}`:''}</small></span><b>{m.type==='ingreso'?'+':'-'}{money(m.amount)}</b></div>):<div className='empty-state'>{connected.mercadopago?'No hay pagos/movimientos dentro del período elegido.':'Conectá Mercado Pago para importar datos reales.'}</div>}</div></>}
   {active==='mercadolibre'&&<><div className='report-grid'><div className='report-card'><small>Ventas</small><strong>{orders.length}</strong><span>Órdenes sincronizadas</span></div><div className='report-card'><small>Importe vendido</small><strong>{money(orders.reduce((a,o)=>a+o.amount,0))}</strong><span>Total bruto</span></div><div className='report-card'><small>Envíos</small><strong>{orders.filter(o=>o.shipment!=='Sin envío').length}</strong><span>Órdenes con envío</span></div></div><div className='panel' style={{marginTop:18}}><h3>Ventas de Mercado Libre</h3>{orders.length?orders.map(o=><div className='trow' key={o.id}><span><b>{o.product} ×{o.quantity}</b><small>{o.date} · {o.buyer} · Pago: {o.payment} · Envío: {o.shipment}{o.tracking?` · Tracking ${o.tracking}`:''}</small></span><b>{money(o.amount)}</b></div>):<div className='empty-state'>No hay ventas sincronizadas.</div>}</div></>}
