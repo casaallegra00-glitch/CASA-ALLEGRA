@@ -9,7 +9,11 @@ export async function GET(req:Request){
  const state=input.searchParams.get('state')||''
  const error=input.searchParams.get('error')
  const expected=await consumeOAuthState()
- const back=new URL(req.url);back.pathname='/';back.search='';back.searchParams.set('integration','mercadopago')
+ const back=new URL(req.url)
+ back.pathname='/'
+ back.search=''
+ back.searchParams.set('section','integraciones')
+ back.searchParams.set('integration','mercadopago')
  if(error){back.searchParams.set('error',`Mercado Pago no autorizó la conexión: ${error}`);return NextResponse.redirect(back)}
  if(!code||!state||!expected||state!==expected.state){back.searchParams.set('error','La autorización de Mercado Pago no pudo verificarse. Volvé a intentarlo.');return NextResponse.redirect(back)}
  try{
