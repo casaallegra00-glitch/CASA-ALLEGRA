@@ -4,7 +4,7 @@ const path=require('path')
 const file=path.join(process.cwd(),'app','page.tsx')
 let source=fs.readFileSync(file,'utf8')
 
-// No cargar el módulo de integraciones por ahora.
+// No cargar el módulo funcional de integraciones por ahora.
 source=source.replace("\nimport IntegrationManager from '../components/IntegrationManager'",'')
 
 // Reemplazar cualquier bloque funcional de Integraciones por una pantalla informativa.
@@ -20,14 +20,15 @@ if(start>=0){
   }
 }
 
-// Hacer que el acceso de navegación a Integraciones sea visualmente no disponible.
-const oldNav="['integraciones','Integraciones','integrations']"
-const newNav="['integraciones','Integraciones · Próximamente','integrations']"
-source=source.replace(oldNav,newNav)
+// Marcar Integraciones como Próximamente y bloquear su navegación.
+source=source.replace("['integraciones','Integraciones','integrations']","['integraciones','Integraciones · Próximamente','integrations']")
+const navPattern="{nav.map(([id,label,icon])=><button key={id} onClick={()=>goTo(id)} className={`nav-item ${section===id?'active':''}`}><Icon name={icon} size={19}/><span>{label}</span></button>)}"
+const navReplacement="{nav.map(([id,label,icon])=><button key={id} type='button' disabled={id==='integraciones'} onClick={()=>id==='integraciones'?setNotice('Integraciones: próximamente.'):goTo(id)} className={`nav-item ${section===id?'active':''}`} style={id==='integraciones'?{opacity:.5,cursor:'not-allowed'}:undefined}><Icon name={icon} size={19}/><span>{label}</span></button>)}"
+source=source.replace(navPattern,navReplacement)
 
-// Evitar que los scripts anteriores de OAuth fuercen la apertura de Integraciones al volver.
+// Evitar que intentos OAuth antiguos fuercen la apertura de Integraciones.
 source=source.replace(/\s*useEffect\(\(\)=>\{const requested=new URLSearchParams\(window\.location\.search\)\.get\('section'\);if\(requested==='integraciones'\)setSection\('integraciones'\)\},\[\]\);/g,'')
 source=source.replace(/\s*useEffect\(\(\)=>\{const requested=new URLSearchParams\(window\.location\.search\)\.get\('section'\);if\(requested==='integraciones'&&userEmail\)setSection\('integraciones'\)\},\[userEmail\]\);/g,'')
 
 fs.writeFileSync(file,source)
-console.log('CASA ALLEGRA: Integraciones desactivadas y marcadas como Próximamente.')
+console.log('CASA ALLEGRA: Integraciones desactivadas, visibles como Próximamente y bloqueadas.')
