@@ -45,7 +45,7 @@ jobs:
           test -f dashboard-enhancements.css
           grep -q '</body>' index.html
           grep -q 'integrations.js' index.html || sed -i 's#</body>#<script src="integrations.js?v=3"></script>\n</body>#' index.html
-          grep -q 'dashboard-enhancements.js' index.html || sed -i 's#</body>#<link rel="stylesheet" href="dashboard-enhancements.css?v=1">\n<script src="dashboard-enhancements.js?v=1"></script>\n</body>#' index.html
+          grep -q 'dashboard-enhancements.js' index.html || sed -i 's#</body>#<link rel="stylesheet" href="dashboard-enhancements.css?v=2">\n<script src="dashboard-enhancements.js?v=2"></script>\n</body>#' index.html
           grep -q 'dashboard-enhancements.js' index.html
           grep -q 'dashboard-enhancements.css' index.html
           touch .nojekyll
