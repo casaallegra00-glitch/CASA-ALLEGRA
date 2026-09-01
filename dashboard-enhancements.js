@@ -12,7 +12,7 @@ function addHome(){
  '<button class="quick" onclick="go(\'costos\')">🧮<span>Calculadora de costos</span></button>'+ 
  '<button class="quick" onclick="showDashboardReport()">📊<span>Ver reportes</span></button>'+ 
  '</div>';
- inicio.appendChild(card);
+ inicio.insertBefore(card,inicio.firstElementChild?.nextElementSibling || inicio.firstElementChild);
 }
 function addReport(){
  if(document.getElementById('reportes')) return;
