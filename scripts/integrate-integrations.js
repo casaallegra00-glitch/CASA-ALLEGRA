@@ -20,14 +20,17 @@ if(end<0)throw new Error('No se encontró el final del bloque de Integraciones.'
 const replacement="{section==='integraciones'&&<IntegrationManager storageKey={`${base}-integraciones`} onNotice={setNotice}/> }\n"
 source=source.slice(0,start)+replacement+source.slice(end)
 
-// OAuth puede volver mientras Supabase todavía está restaurando la sesión. No forzar Inicio.
+// El retorno OAuth de Mercado Pago debe poder abrir Integraciones inmediatamente,
+// sin depender de que Supabase haya terminado de restaurar la sesión.
 const queryGuard="useEffect(()=>{if(!userEmail&&section!=='inicio')setSection('inicio')},[userEmail,section]);"
 if(source.includes(queryGuard))source=source.replace(queryGuard,'')
-const queryEffect="useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('section');if(requested==='integraciones'&&userEmail)setSection('integraciones')},[userEmail]);"
-if(!source.includes("requested==='integraciones'")){
+const oldQueryEffect="useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('section');if(requested==='integraciones'&&userEmail)setSection('integraciones')},[userEmail]);"
+const newQueryEffect="useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('section');if(requested==='integraciones')setSection('integraciones')},[]);"
+if(source.includes(oldQueryEffect))source=source.replace(oldQueryEffect,newQueryEffect)
+else if(!source.includes("requested==='integraciones'")){
  const anchor="useEffect(()=>{if(!supabase)return;"
  const idx=source.indexOf(anchor)
- if(idx>=0)source=source.slice(0,idx)+queryEffect+' '+source.slice(idx)
+ if(idx>=0)source=source.slice(0,idx)+newQueryEffect+' '+source.slice(idx)
 }
 fs.writeFileSync(file,source)
 
@@ -37,16 +40,6 @@ if(fs.existsSync(managerFile)){
  const oldGuard="if(key==='mercadopago'&&!connected.mercadopago){window.location.href=mpConfigured?'/api/integrations/mercadopago/connect':'/';return}"
  const newGuard="if(key==='mercadopago'&&!connected.mercadopago){if(!configured.mercadopago){onNotice('Mercado Pago todavía no está configurado en el servidor. Configurá las credenciales OAuth en Vercel.');return}connectMercadoPago();return}"
  if(manager.includes(oldGuard)&&!manager.includes(newGuard))manager=manager.replace(oldGuard,newGuard)
- const duplicateButton="{active==='mercadopago'&&!connected.mercadopago&&<button type='button' className='primary-btn' onClick={connectMercadoPago} disabled={loading}>Conectar Mercado Pago</button>}"
- // There is intentionally only one MP connect button in the manager.
- const callbackFile=path.join(process.cwd(),'app','api','integrations','mercadopago','callback','route.ts')
  fs.writeFileSync(managerFile,manager)
- if(fs.existsSync(callbackFile)){
-  let callback=fs.readFileSync(callbackFile,'utf8')
-  const oldBack="const back=new URL(req.url);back.pathname='/';back.search='';back.searchParams.set('integration','mercadopago')"
-  const newBack="const back=new URL(req.url);back.pathname='/';back.search='';back.searchParams.set('section','integraciones');back.searchParams.set('integration','mercadopago')"
-  if(callback.includes(oldBack)&&!callback.includes(newBack))callback=callback.replace(oldBack,newBack)
-  fs.writeFileSync(callbackFile,callback)
- }
 }
-console.log('CASA ALLEGRA: flujo OAuth de Mercado Pago sin redirección forzada a Inicio.')
+console.log('CASA ALLEGRA: retorno OAuth de Mercado Pago abre Integraciones sin depender de Supabase.')
