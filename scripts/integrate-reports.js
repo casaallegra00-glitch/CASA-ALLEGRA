@@ -10,6 +10,15 @@ const homeImport = "import HomeDashboard from '../components/HomeDashboard'"
 if (!source.includes(homeImport)) {
   source = source.replace("import ReportsManager from '../components/ReportsManager'", "import ReportsManager from '../components/ReportsManager'\n" + homeImport)
 }
+const quickEffect = " useEffect(()=>{const ids:Record<string,string>={productos:'quick-product-form',clientes:'quick-client-form',pedidos:'quick-order-form',caja:'quick-cash-form'};const id=ids[section];if(id&&userEmail){window.setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:'smooth',block:'center'}),80)}},[section,userEmail])\n"
+if (!source.includes("quick-product-form")) {
+  const marker = " useEffect(()=>{if(!userEmail&&section!=='inicio')setSection('inicio')},[userEmail,section]);"
+  source = source.replace(marker, marker + quickEffect)
+}
+source = source.replace('<form className="panel form-panel" onSubmit={addProduct}>','<form id="quick-product-form" className="panel form-panel" onSubmit={addProduct}>')
+source = source.replace('<form className="panel form-panel" onSubmit={addClient}>','<form id="quick-client-form" className="panel form-panel" onSubmit={addClient}>')
+source = source.replace('<form className="panel form-panel" onSubmit={addOrder}>','<form id="quick-order-form" className="panel form-panel" onSubmit={addOrder}>')
+source = source.replace('<div className="panel"><h2>Movimientos</h2><form onSubmit={addCash(\'ingreso\')}','<div id="quick-cash-form" className="panel"><h2>Movimientos</h2><form onSubmit={addCash(\'ingreso\')}')
 const homeMarker = "{section==='inicio'&&"
 const homeNextMarker = "{section==='productos'&&"
 const homeStart = source.indexOf(homeMarker)
@@ -25,4 +34,4 @@ if (start === -1 || end === -1) throw new Error('No se encontró el bloque de Re
 const replacement = "{section==='reportes'&&<ReportsManager sales={sales} cash={cash} products={products} clients={clients} orders={orders}/> }\n"
 source = source.slice(0, start) + replacement + source.slice(end)
 fs.writeFileSync(file, source)
-console.log('CASA ALLEGRA: Inicio y módulo de Reportes integrados con navegación protegida.')
+console.log('CASA ALLEGRA: accesos rápidos funcionales con navegación y desplazamiento al formulario.')
