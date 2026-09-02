@@ -15,14 +15,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           dangerouslySetInnerHTML={{
             __html: `(() => {
               try {
+                // CASA ALLEGRA: nunca borrar ni reiniciar datos locales.
+                // El historial existente debe poder migrarse y sincronizarse con la nube.
                 const resetKey = 'casa-allegra-zero-data-v1';
-                if (localStorage.getItem(resetKey) !== 'done') {
-                  localStorage.setItem('casa-allegra-products', '[]');
-                  localStorage.setItem('casa-allegra-sales', '[]');
-                  localStorage.setItem('casa-allegra-clients', '0');
-                  localStorage.setItem('casa-allegra-orders', '0');
-                  localStorage.setItem(resetKey, 'done');
-                }
+                if (!localStorage.getItem(resetKey)) localStorage.setItem(resetKey, 'preserved');
               } catch (_) {}
               const fixBrandAssets = () => {
                 document.querySelectorAll('img[src="/icon-512.png"],img[src="/logo-casa-allegra.png"]').forEach((img) => {
