@@ -20,9 +20,9 @@ if (existingStart !== -1) {
 
 const storageDeclaration = " const [storageReady,setStorageReady]=useState(false);"
 if (!source.includes('const [storageReady,setStorageReady]')) {
-  const stateRegex = /(const \[products,setProducts\]=useState<Product\[\]>\(\[\]\); const \[sales,setSales\]=useState<Sale\[\]>\(\[\]\); const \[clients,setClients\]=useState<Client\[\]>\(\[\]\); const \[orders,setOrders\]=useState<Order\[\]>\(\[\]\); const \[cash,setCash\]=useState<CashMove\[\]>\(\[\]\);)/
-  if (!stateRegex.test(source)) throw new Error('CASA ALLEGRA: no se encontró la declaración principal de estados.')
-  source = source.replace(stateRegex, `$1${storageDeclaration}`)
+  const cashStateRegex = /(const \[cash,setCash\]=useState<CashMove\[\]>\(\[\]\);)/
+  if (!cashStateRegex.test(source)) throw new Error('CASA ALLEGRA: no se encontró el estado de Caja para insertar el estado de recuperación.')
+  source = source.replace(cashStateRegex, `$1${storageDeclaration}`)
 }
 
 const savePattern = /useEffect\(\(\)=>save\(`\$\{base\}-products`,products\),\[base,products\]\); useEffect\(\(\)=>save\(`\$\{base\}-sales`,sales\),\[base,sales\]\); useEffect\(\(\)=>save\(`\$\{base\}-clients`,clients\),\[base,clients\]\); useEffect\(\(\)=>save\(`\$\{base\}-orders`,orders\),\[base,orders\]\); useEffect\(\(\)=>save\(`\$\{base\}-cash`,cash\),\[base,cash\]\); useEffect\(\(\)=>save\(`\$\{base\}-categories`,businessCategories\),\[base,businessCategories\]\);/
