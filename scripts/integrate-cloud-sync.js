@@ -18,13 +18,16 @@ if (existingStart !== -1) {
   source = source.slice(0, existingStart) + source.slice(existingEnd + endMarker.length)
 }
 
-const saveGuard = "useEffect(()=>save(`${base}-products`,products),[base,products]); useEffect(()=>save(`${base}-sales`,sales),[base,sales]); useEffect(()=>save(`${base}-clients`,clients),[base,clients]); useEffect(()=>save(`${base}-orders`,orders),[base,orders]); useEffect(()=>save(`${base}-cash`,cash),[base,cash]); useEffect(()=>save(`${base}-categories`,businessCategories),[base,businessCategories]);"
-const guardedSave = "useEffect(()=>{if(!storageReady)return;save(`${base}-products`,products)},[base,products,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-sales`,sales)},[base,sales,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-clients`,clients)},[base,clients,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-orders`,orders)},[base,orders,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-cash`,cash)},[base,cash,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-categories`,businessCategories)},[base,businessCategories,storageReady]);"
-if (source.includes(saveGuard)) source = source.replace(saveGuard, guardedSave)
+const storageDeclaration = " const [storageReady,setStorageReady]=useState(false);"
+if (!source.includes('const [storageReady,setStorageReady]')) {
+  const stateRegex = /(const \[products,setProducts\]=useState<Product\[\]>\(\[\]\); const \[sales,setSales\]=useState<Sale\[\]>\(\[\]\); const \[clients,setClients\]=useState<Client\[\]>\(\[\]\); const \[orders,setOrders\]=useState<Order\[\]>\(\[\]\); const \[cash,setCash\]=useState<CashMove\[\]>\(\[\]\);)/
+  if (!stateRegex.test(source)) throw new Error('CASA ALLEGRA: no se encontró la declaración principal de estados.')
+  source = source.replace(stateRegex, `$1${storageDeclaration}`)
+}
 
-const stateNeedle = "const [products,setProducts]=useState<Product[]>([]); const [sales,setSales]=useState<Sale[]>([]); const [clients,setClients]=useState<Client[]>([]); const [orders,setOrders]=useState<Order[]>([]); const [cash,setCash]=useState<CashMove[]>([]);"
-const stateReplacement = stateNeedle + " const [storageReady,setStorageReady]=useState(false);"
-if (source.includes(stateNeedle) && !source.includes('const [storageReady,setStorageReady]')) source = source.replace(stateNeedle, stateReplacement)
+const savePattern = /useEffect\(\(\)=>save\(`\$\{base\}-products`,products\),\[base,products\]\); useEffect\(\(\)=>save\(`\$\{base\}-sales`,sales\),\[base,sales\]\); useEffect\(\(\)=>save\(`\$\{base\}-clients`,clients\),\[base,clients\]\); useEffect\(\(\)=>save\(`\$\{base\}-orders`,orders\),\[base,orders\]\); useEffect\(\(\)=>save\(`\$\{base\}-cash`,cash\),\[base,cash\]\); useEffect\(\(\)=>save\(`\$\{base\}-categories`,businessCategories\),\[base,businessCategories\]\);/
+const guardedSave = "useEffect(()=>{if(!storageReady)return;save(`${base}-products`,products)},[base,products,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-sales`,sales)},[base,sales,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-clients`,clients)},[base,clients,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-orders`,orders)},[base,orders,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-cash`,cash)},[base,cash,storageReady]); useEffect(()=>{if(!storageReady)return;save(`${base}-categories`,businessCategories)},[base,businessCategories,storageReady]);"
+if (savePattern.test(source)) source = source.replace(savePattern, guardedSave)
 
 const oldLoad = "useEffect(()=>{if(!userEmail)return;setProducts(load(`${base}-products`,[]));setSales(load(`${base}-sales`,[]));setClients(load(`${base}-clients`,[]));setOrders(load(`${base}-orders`,[]));setCash(load(`${base}-cash`,[]));setBusinessCategories(load(`${base}-categories`,['General','Productos','Servicios','Otros']));const stored=load(`${base}-business`,'');if(stored)setBusinessName(stored)},[userEmail,base]);"
 const newLoad = "useEffect(()=>{if(!userEmail){setStorageReady(false);return}setStorageReady(false);setProducts(load(`${base}-products`,[]));setSales(load(`${base}-sales`,[]));setClients(load(`${base}-clients`,[]));setOrders(load(`${base}-orders`,[]));setCash(load(`${base}-cash`,[]));setBusinessCategories(load(`${base}-categories`,['General','Productos','Servicios','Otros']));const stored=load(`${base}-business`,'');if(stored)setBusinessName(stored);setStorageReady(true)},[userEmail,base]);"
