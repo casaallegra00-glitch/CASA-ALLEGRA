@@ -5,9 +5,7 @@ const file = path.join(process.cwd(), 'app', 'page.tsx')
 let source = fs.readFileSync(file, 'utf8')
 
 const needle = "const key=userEmail.toLowerCase().trim(); const base=`casa-allegra-${key||'guest'}`;"
-if (!source.includes(needle)) {
-  throw new Error('CASA ALLEGRA: no se encontró el punto de integración de sincronización.')
-}
+if (!source.includes(needle)) throw new Error('CASA ALLEGRA: no se encontró el punto de integración de sincronización.')
 
 const startMarker = ' // CASA ALLEGRA UNIVERSAL CLOUD SYNC:'
 const endMarker = '},[userEmail,base]);'
@@ -36,7 +34,7 @@ if (source.includes(oldLoad)) source = source.replace(oldLoad, newLoad)
 const injected = [
 "const key=userEmail.toLowerCase().trim(); const base=`casa-allegra-${key||'guest'}`;",
 " // CASA ALLEGRA UNIVERSAL CLOUD SYNC: recuperación segura y sincronización de TODO el historial.",
-" useEffect(()=>{if(!userEmail||!supabase)return;let cancelled=false;let timer;let syncing=false;const db=supabase;const prefix='casa-allegra-';",
+" useEffect(()=>{if(!userEmail||!supabase)return;let cancelled=false;let timer;let syncing=false;const db:any=supabase;const prefix='casa-allegra-';",
 "const snapshot=():Record<string,string>=>{const out:Record<string,string>={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(prefix)&&k!=='casa-allegra-cloud-last-snapshot'&&k!=='casa-allegra-zero-data-v1')out[k]=localStorage.getItem(k)||''}return out};",
 "const migrate=()=>{const legacy=['products','sales','clients','orders','cash','categories','business'];for(const s of legacy){const old=prefix+s;const target=base+'-'+s;const v=localStorage.getItem(old);if(v!=null&&(!localStorage.getItem(target)||localStorage.getItem(target)==='[]'||localStorage.getItem(target)===''))try{localStorage.setItem(target,v)}catch{}}};",
 "const empty=(v:string|undefined|null)=>v==null||v===''||v==='[]'||v==='{}'||v==='null';",
