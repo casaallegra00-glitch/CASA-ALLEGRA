@@ -12,7 +12,6 @@ if (!source.includes('const [editingProduct')) {
   source = source.replace(stateNeedle, stateNeedle + " const [editingProduct,setEditingProduct]=useState<Product|null>(null);")
 }
 
-// Mantener Product compatible con el nuevo campo Marca.
 const productTypePattern = /type Product = \{([^\n]*)\}/
 if (productTypePattern.test(source) && !/type Product = \{[^\n]*brand\?:string/.test(source)) {
   source = source.replace(productTypePattern, (m, body) => `type Product = {${body}; brand?:string}`)
@@ -20,12 +19,11 @@ if (productTypePattern.test(source) && !/type Product = \{[^\n]*brand\?:string/.
 
 if (!source.includes('const updateProduct=')) {
   const needle = " const registerSale="
-  const insert = " const updateProduct=(id:number,patch:Partial<Product>)=>{setProducts(ps=>ps.map(p=>p.id===id?{...p,...patch}:p));setNotice('✅ Producto actualizado correctamente.')};\n const deleteProduct=async(product:Product)=>{if(!window.confirm('¿Eliminar el producto '+product.name+'?'))return;const nextProducts=products.filter(p=>p.id!==product.id);setProducts(nextProducts);save(`${base}-products`,nextProducts);setNotice('🗑️ Producto eliminado correctamente.');if(supabase&&userEmail){try{const {data:userData}=await supabase.auth.getUser();const uid=userData.user?.id;if(uid){const payload={products:nextProducts,sales,clients,orders,cash,businessCategories,businessName};const {error}=await supabase.from('business_state').upsert({user_id:uid,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error}}catch(err){console.warn('CASA ALLEGRA: no se pudo confirmar la eliminación en la nube.',err)}}};\n const openProductEditor=(product:Product)=>setEditingProduct(product);\n"
+  const insert = " const updateProduct=(id:number,patch:Partial<Product>)=>{setProducts(ps=>ps.map(p=>p.id===id?{...p,...patch}:p));setNotice('✅ Producto actualizado correctamente.')};\n const deleteProduct=async(product:Product)=>{if(!window.confirm('¿Eliminar el producto '+product.name+'?'))return;const nextProducts=products.filter(p=>p.id!==product.id);setProducts(nextProducts);save(`${base}-products`,nextProducts);setNotice('🗑️ Producto eliminado correctamente.');if(supabase&&userEmail){try{const authResult:any=await (supabase as any).auth.getUser();const uid=authResult?.data?.user?.id;if(uid){const payload={products:nextProducts,sales,clients,orders,cash,businessCategories,businessName};const result:any=await (supabase as any).from('business_state').upsert({user_id:uid,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(result?.error)throw result.error}}catch(err){console.warn('CASA ALLEGRA: no se pudo confirmar la eliminación en la nube.',err)}}};\n const openProductEditor=(product:Product)=>setEditingProduct(product);\n"
   if (!source.includes(needle)) throw new Error('No se encontró el punto de inserción de Productos.')
   source = source.replace(needle, insert + needle)
 }
 
-// Asegurar que el alta de Productos guarde también la marca.
 const addProductStart = source.indexOf(' const addProduct=')
 const registerSaleStart = source.indexOf(' const registerSale=', addProductStart)
 if (addProductStart !== -1 && registerSaleStart !== -1) {
