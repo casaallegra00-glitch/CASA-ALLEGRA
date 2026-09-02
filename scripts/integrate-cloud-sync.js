@@ -9,7 +9,7 @@ if (source.includes('CASA ALLEGRA CLOUD SYNC')) {
   process.exit(0)
 }
 
-// El archivo se genera/reformatea con distintos scripts, por eso usamos patrones tolerantes.
+// Integramos sobre el código real generado por los demás scripts. Los patrones son deliberadamente tolerantes.
 const statePattern = /const\s*\[cash\s*,\s*setCash\]\s*=\s*useState<CashMove\[\]>\(\[\]\);/
 if (!statePattern.test(source)) {
   console.warn('CASA ALLEGRA: no se encontró el estado principal; se omite cloud sync para no romper el build.')
@@ -17,7 +17,8 @@ if (!statePattern.test(source)) {
 }
 source = source.replace(statePattern, 'const [cash,setCash]=useState<CashMove[]>([]); const [cloudReady,setCloudReady]=useState(false);')
 
-const loadPattern = /useEffect\(\(\)=>\{if\(!userEmail\)return;setProducts\(load\(`\$\{base\}-products`,\[\]\)\);setSales\(load\(`\$\{base\}-sales`,\[\]\)\);setClients\(load\(`\$\{base\}-clients`,\[\]\)\);setOrders\(load\(`\$\{base\}-orders`,\[\]\)\);setCash\(load\(`\$\{base\}-cash`,\[\]\)\);setBusinessCategories\(load\(`\$\{base\}-categories`,\[[^\]]*\]\)\);const stored=load\(`\$\{base\}-business`,'[^']*'\);if\(stored\)setBusinessName\(stored\)\},\[userEmail,base\]\);/
+// Reemplaza exactamente el efecto que carga los datos locales al cambiar de usuario.
+const loadPattern = /useEffect\(\(\)=>\{if\(!userEmail\)return;[\s\S]*?\},\[userEmail,base\]\);/
 
 const cloudLoad = `// CASA ALLEGRA CLOUD SYNC: la nube es la fuente principal y localStorage queda como respaldo.
  useEffect(()=>{let cancelled=false;const sync=async()=>{if(!userEmail){setCloudReady(false);return}setCloudReady(false);const localProducts=load(\`\${base}-products\`,[]);const localSales=load(\`\${base}-sales\`,[]);const localClients=load(\`\${base}-clients\`,[]);const localOrders=load(\`\${base}-orders\`,[]);const localCash=load(\`\${base}-cash\`,[]);const localCategories=load(\`\${base}-categories\`,['General','Productos','Servicios','Otros']);const localBusiness=load(\`\${base}-business\`,'');if(localProducts.length)setProducts(localProducts);if(localSales.length)setSales(localSales);if(localClients.length)setClients(localClients);if(localOrders.length)setOrders(localOrders);if(localCash.length)setCash(localCash);setBusinessCategories(localCategories);if(localBusiness)setBusinessName(localBusiness);if(!supabase){if(!cancelled)setCloudReady(true);return}try{const {data:userData}=await supabase.auth.getUser();const uid=userData.user?.id;if(!uid){if(!cancelled)setCloudReady(true);return}const {data,error}=await supabase.from('business_state').select('payload,updated_at').eq('user_id',uid).maybeSingle();if(error)throw error;if(data?.payload){const p=data.payload;if(!cancelled){setProducts(Array.isArray(p.products)?p.products:[]);setSales(Array.isArray(p.sales)?p.sales:[]);setClients(Array.isArray(p.clients)?p.clients:[]);setOrders(Array.isArray(p.orders)?p.orders:[]);setCash(Array.isArray(p.cash)?p.cash:[]);setBusinessCategories(Array.isArray(p.businessCategories)?p.businessCategories:localCategories);if(typeof p.businessName==='string')setBusinessName(p.businessName)}}else{const payload={products:localProducts,sales:localSales,clients:localClients,orders:localOrders,cash:localCash,businessCategories:localCategories,businessName:localBusiness||''};const {error:upsertError}=await supabase.from('business_state').upsert({user_id:uid,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(upsertError)throw upsertError}}catch(err){console.warn('CASA ALLEGRA: no se pudo sincronizar con la nube; se mantiene el respaldo local.',err)}finally{if(!cancelled)setCloudReady(true)}};sync();return()=>{cancelled=true}},[userEmail,base]);`
@@ -28,7 +29,8 @@ if (!loadPattern.test(source)) {
 }
 source = source.replace(loadPattern, cloudLoad)
 
-const savesPattern = /useEffect\(\(\)=>save\(`\$\{base\}-products`,products\),\[base,products\]\); useEffect\(\(\)=>save\(`\$\{base\}-sales`,sales\),\[base,sales\]\); useEffect\(\(\)=>save\(`\$\{base\}-clients`,clients\),\[base,clients\]\); useEffect\(\(\)=>save\(`\$\{base\}-orders`,orders\),\[base,orders\]\); useEffect\(\(\)=>save\(`\$\{base\}-cash`,cash\),\[base,cash\]\); useEffect\(\(\)=>save\(`\$\{base\}-categories`,businessCategories\),\[base,businessCategories\]\); useEffect\(\(\)=>\{if\(businessName\)save\(`\$\{base\}-business`,businessName\)\},\[base,businessName\]\);/
+// Reemplaza todos los efectos de guardado local por los mismos respaldos + guardado cloud.
+const savesPattern = /useEffect\(\(\)=>save\([\s\S]*?\[base,businessName\]\);/
 
 const cloudSaves = `useEffect(()=>save(\`\${base}-products\`,products),[base,products]); useEffect(()=>save(\`\${base}-sales\`,sales),[base,sales]); useEffect(()=>save(\`\${base}-clients\`,clients),[base,clients]); useEffect(()=>save(\`\${base}-orders\`,orders),[base,orders]); useEffect(()=>save(\`\${base}-cash\`,cash),[base,cash]); useEffect(()=>save(\`\${base}-categories\`,businessCategories),[base,businessCategories]); useEffect(()=>{if(businessName)save(\`\${base}-business\`,businessName)},[base,businessName]);
  // CASA ALLEGRA CLOUD SYNC: cada cambio se guarda en la cuenta, no en el dispositivo.
