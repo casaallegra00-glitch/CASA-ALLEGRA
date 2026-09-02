@@ -4,45 +4,20 @@ const path = require('path')
 const file = path.join(process.cwd(), 'app', 'page.tsx')
 let source = fs.readFileSync(file, 'utf8')
 
-if (source.includes('CASA ALLEGRA CLOUD SYNC')) {
-  console.log('CASA ALLEGRA: sincronización en la nube ya integrada.')
+if (source.includes('CASA ALLEGRA UNIVERSAL CLOUD SYNC')) {
+  console.log('CASA ALLEGRA: sincronización universal ya integrada.')
   process.exit(0)
 }
 
-// Integramos sobre el código real generado por los demás scripts. Los patrones son deliberadamente tolerantes.
-const statePattern = /const\s*\[cash\s*,\s*setCash\]\s*=\s*useState<CashMove\[\]>\(\[\]\);/
-if (!statePattern.test(source)) {
-  console.warn('CASA ALLEGRA: no se encontró el estado principal; se omite cloud sync para no romper el build.')
-  process.exit(0)
+const needle = "const key=userEmail.toLowerCase().trim(); const base=`casa-allegra-${key||'guest'}`;"
+if (!source.includes(needle)) {
+  throw new Error('CASA ALLEGRA: no se encontró el punto de integración de sincronización. El build se detiene para evitar publicar una app sin nube.')
 }
-source = source.replace(statePattern, 'const [cash,setCash]=useState<CashMove[]>([]); const [cloudReady,setCloudReady]=useState(false);')
 
-// Reemplaza exactamente el efecto que carga los datos locales al cambiar de usuario.
-const loadPattern = /useEffect\(\(\)=>\{if\(!userEmail\)return;[\s\S]*?\},\[userEmail,base\]\);/
+const injected = `const key=userEmail.toLowerCase().trim(); const base=\`casa-allegra-\${key||'guest'}\`;
+ // CASA ALLEGRA UNIVERSAL CLOUD SYNC: sincroniza TODO el historial guardado en localStorage de todas las herramientas.
+ useEffect(()=>{if(!userEmail||!supabase)return;let cancelled=false;let timer:number|undefined;let syncing=false;const prefix='casa-allegra-';const snapshot=()=>{const out:Record<string,string>={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(prefix))out[k]=localStorage.getItem(k)||''}return out};const same=(a:Record<string,string>,b:Record<string,string>)=>JSON.stringify(a)===JSON.stringify(b);const merge=(local:Record<string,string>,cloud:Record<string,string>)=>{const out={...cloud,...local};for(const k of new Set([...Object.keys(cloud),...Object.keys(local)])){const lv=local[k],cv=cloud[k];if(lv==null){out[k]=cv;continue}if(cv==null){out[k]=lv;continue}try{const l=JSON.parse(lv),c=JSON.parse(cv);if(Array.isArray(l)&&Array.isArray(c)){const all=[...c,...l];const seen=new Set<string>();const merged:any[]=[];for(const item of all){const id=item&&typeof item==='object'?(item.id??item.number??item.sku??null):null;const sig=id!=null?String(id):JSON.stringify(item);if(!seen.has(sig)){seen.add(sig);merged.push(item)}}out[k]=JSON.stringify(merged)}else{out[k]=lv||cv}}catch{out[k]=lv||cv}}return out};const write=(data:Record<string,string>)=>{for(const [k,v] of Object.entries(data)){try{if(localStorage.getItem(k)!==v)localStorage.setItem(k,v)}catch{}}};const getCloud=async()=>{const {data:u}=await supabase.auth.getUser();const uid=u.user?.id;if(!uid)return null;const {data,error}=await supabase.from('business_state').select('payload,updated_at').eq('user_id',uid).maybeSingle();if(error)throw error;return {uid,payload:data?.payload||null}};const push=async(data:Record<string,string>,uid:string)=>{const payload={version:2,storage:data,products:load(\`${base}-products\`,[]),sales:load(\`${base}-sales\`,[]),clients:load(\`${base}-clients\`,[]),orders:load(\`${base}-orders\`,[]),cash:load(\`${base}-cash\`,[]),businessCategories:load(\`${base}-categories\`,['General','Productos','Servicios','Otros']),businessName:load(\`${base}-business\`,'')};const {error}=await supabase.from('business_state').upsert({user_id:uid,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error};const hydrate=async()=>{if(cancelled||syncing)return;syncing=true;try{const local=snapshot();const cloud=await getCloud();if(!cloud)return;const cloudStorage=cloud.payload?.storage&&typeof cloud.payload.storage==='object'?cloud.payload.storage:{};if(Object.keys(cloudStorage).length===0){await push(local,cloud.uid);return}const merged=merge(local,cloudStorage);const changed=!same(local,merged);write(merged);if(changed&&!sessionStorage.getItem(\`casa-allegra-cloud-reloaded-\${cloud.uid}\`)){sessionStorage.setItem(\`casa-allegra-cloud-reloaded-\${cloud.uid}\`,'1');window.location.reload();return}await push(merged,cloud.uid)}catch(err){console.warn('CASA ALLEGRA: sincronización universal no disponible.',err)}finally{syncing=false}};const start=async()=>{await hydrate();timer=window.setInterval(async()=>{if(document.visibilityState==='visible'){try{const local=snapshot();const last=sessionStorage.getItem('casa-allegra-cloud-last-snapshot');const current=JSON.stringify(local);if(last!==current){const cloud=await getCloud();if(cloud){await push(local,cloud.uid);sessionStorage.setItem('casa-allegra-cloud-last-snapshot',current)}}}catch(err){console.warn('CASA ALLEGRA: error guardando historial en la nube.',err)}}},1500)};start();const refresh=()=>{if(document.visibilityState==='visible')hydrate()};window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);return()=>{cancelled=true;if(timer)window.clearInterval(timer);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh)}},[userEmail,base]);`
 
-const cloudLoad = `// CASA ALLEGRA CLOUD SYNC: la nube es la fuente principal y localStorage queda como respaldo.
- useEffect(()=>{let cancelled=false;const sync=async()=>{if(!userEmail){setCloudReady(false);return}setCloudReady(false);const localProducts=load(\`\${base}-products\`,[]);const localSales=load(\`\${base}-sales\`,[]);const localClients=load(\`\${base}-clients\`,[]);const localOrders=load(\`\${base}-orders\`,[]);const localCash=load(\`\${base}-cash\`,[]);const localCategories=load(\`\${base}-categories\`,['General','Productos','Servicios','Otros']);const localBusiness=load(\`\${base}-business\`,'');if(localProducts.length)setProducts(localProducts);if(localSales.length)setSales(localSales);if(localClients.length)setClients(localClients);if(localOrders.length)setOrders(localOrders);if(localCash.length)setCash(localCash);setBusinessCategories(localCategories);if(localBusiness)setBusinessName(localBusiness);if(!supabase){if(!cancelled)setCloudReady(true);return}try{const {data:userData}=await supabase.auth.getUser();const uid=userData.user?.id;if(!uid){if(!cancelled)setCloudReady(true);return}const {data,error}=await supabase.from('business_state').select('payload,updated_at').eq('user_id',uid).maybeSingle();if(error)throw error;if(data?.payload){const p=data.payload;if(!cancelled){setProducts(Array.isArray(p.products)?p.products:[]);setSales(Array.isArray(p.sales)?p.sales:[]);setClients(Array.isArray(p.clients)?p.clients:[]);setOrders(Array.isArray(p.orders)?p.orders:[]);setCash(Array.isArray(p.cash)?p.cash:[]);setBusinessCategories(Array.isArray(p.businessCategories)?p.businessCategories:localCategories);if(typeof p.businessName==='string')setBusinessName(p.businessName)}}else{const payload={products:localProducts,sales:localSales,clients:localClients,orders:localOrders,cash:localCash,businessCategories:localCategories,businessName:localBusiness||''};const {error:upsertError}=await supabase.from('business_state').upsert({user_id:uid,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(upsertError)throw upsertError}}catch(err){console.warn('CASA ALLEGRA: no se pudo sincronizar con la nube; se mantiene el respaldo local.',err)}finally{if(!cancelled)setCloudReady(true)}};sync();return()=>{cancelled=true}},[userEmail,base]);`
-
-if (!loadPattern.test(source)) {
-  console.warn('CASA ALLEGRA: no se encontró el cargador local; se omite cloud sync para no romper el build.')
-  process.exit(0)
-}
-source = source.replace(loadPattern, cloudLoad)
-
-// Reemplaza todos los efectos de guardado local por los mismos respaldos + guardado cloud.
-const savesPattern = /useEffect\(\(\)=>save\([\s\S]*?\[base,businessName\]\);/
-
-const cloudSaves = `useEffect(()=>save(\`\${base}-products\`,products),[base,products]); useEffect(()=>save(\`\${base}-sales\`,sales),[base,sales]); useEffect(()=>save(\`\${base}-clients\`,clients),[base,clients]); useEffect(()=>save(\`\${base}-orders\`,orders),[base,orders]); useEffect(()=>save(\`\${base}-cash\`,cash),[base,cash]); useEffect(()=>save(\`\${base}-categories\`,businessCategories),[base,businessCategories]); useEffect(()=>{if(businessName)save(\`\${base}-business\`,businessName)},[base,businessName]);
- // CASA ALLEGRA CLOUD SYNC: cada cambio se guarda en la cuenta, no en el dispositivo.
- useEffect(()=>{if(!cloudReady||!supabase||!userEmail)return;let cancelled=false;const timer=window.setTimeout(async()=>{try{const {data:userData}=await supabase.auth.getUser();const uid=userData.user?.id;if(!uid||cancelled)return;const payload={products,sales,clients,orders,cash,businessCategories,businessName};const {error}=await supabase.from('business_state').upsert({user_id:uid,payload,updated_at:new Date().toISOString()},{onConflict:'user_id'});if(error)throw error}catch(err){console.warn('CASA ALLEGRA: error guardando sincronización.',err)}},350);return()=>{cancelled=true;window.clearTimeout(timer)}},[cloudReady,userEmail,products,sales,clients,orders,cash,businessCategories,businessName]);
- // Al volver a abrir/enfocar la app, vuelve a leer la nube para reflejar cambios hechos en otro dispositivo.
- useEffect(()=>{if(!cloudReady||!supabase||!userEmail)return;const refresh=async()=>{try{const {data:userData}=await supabase.auth.getUser();const uid=userData.user?.id;if(!uid)return;const {data}=await supabase.from('business_state').select('payload').eq('user_id',uid).maybeSingle();const p=data?.payload;if(!p)return;setProducts(Array.isArray(p.products)?p.products:[]);setSales(Array.isArray(p.sales)?p.sales:[]);setClients(Array.isArray(p.clients)?p.clients:[]);setOrders(Array.isArray(p.orders)?p.orders:[]);setCash(Array.isArray(p.cash)?p.cash:[]);setBusinessCategories(Array.isArray(p.businessCategories)?p.businessCategories:['General','Productos','Servicios','Otros']);if(typeof p.businessName==='string')setBusinessName(p.businessName)}catch(err){console.warn('CASA ALLEGRA: error actualizando desde la nube.',err)}};const onVisible=()=>{if(document.visibilityState==='visible')refresh()};window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',onVisible);return()=>{window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',onVisible)}},[cloudReady,userEmail]);`
-
-if (!savesPattern.test(source)) {
-  console.warn('CASA ALLEGRA: no se encontraron los guardados locales; se omite cloud sync para no romper el build.')
-  process.exit(0)
-}
-source = source.replace(savesPattern, cloudSaves)
-
+source = source.replace(needle, injected)
 fs.writeFileSync(file, source)
-console.log('CASA ALLEGRA: sincronización en la nube integrada correctamente.')
+console.log('CASA ALLEGRA: sincronización universal integrada correctamente.')
